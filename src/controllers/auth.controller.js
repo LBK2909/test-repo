@@ -1,11 +1,30 @@
 const httpStatus = require("http-status");
 const catchAsync = require("../utils/catchAsync");
 const { authService, userService, tokenService, emailService } = require("../services");
+const { User } = require("../models");
 
+const mongoose = require("mongoose");
 exports.register = catchAsync(async (req, res) => {
-  const user = await userService.createUser(req.body, res);
-  const tokens = await tokenService.generateAuthTokens(user);
-  res.status(httpStatus.CREATED).send({ user, tokens });
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const user = await userService.createUser(req.body, session);
+    console.log("user....", user);
+    const tenant = await userService.createTenant(user, session);
+    console.log({ tenant });
+    // const tokens = await tokenService.generateAuthTokens(user);
+    let updateUser = await User.findById(user._id).session(session);
+    updateUser.tenantId = tenant._id;
+    await updateUser.save({ session });
+    // let updateUser = await userService.updateUserById(user._id, { tenantId: tenant._id });
+    await session.commitTransaction();
+    session.endSession();
+    // res.status(httpStatus.CREATED).send({ user, tokens });
+  } catch (error) {
+    console.log("error....", error);
+    await session.abortTransaction();
+    session.endSession();
+  }
 });
 
 exports.login = catchAsync(async (req, res) => {

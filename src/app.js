@@ -11,9 +11,9 @@ const CustomError = require("./utils/CustomError");
 const { errorHandler, errorConverter } = require("./middlewares/error.middleware");
 var session = require("express-session");
 var passport = require("passport");
+require("./config/logger");
 
 // Example route that throws an error
-
 const app = express();
 connectDB();
 

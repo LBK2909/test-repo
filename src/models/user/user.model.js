@@ -2,10 +2,19 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
 const httpStatus = require("http-status");
-const CustomError = require("../utils/customError");
+const CustomError = require("../../utils/customError");
+const { getNextDocumentId } = require("../../utils/db.js");
 
 const userSchema = mongoose.Schema(
   {
+    _id: Number,
+    tenantId: {
+      type: Number,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "tenant",
+    },
     name: {
       type: String,
       required: true,
@@ -45,7 +54,8 @@ const userSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
+  { _id: false }
 );
 
 // add plugin that converts mongoose to json
@@ -77,6 +87,12 @@ userSchema.pre("save", async function (next) {
   const user = this;
   if (user.isModified("password")) {
     user.password = await bcrypt.hash(user.password, 8);
+  }
+  if (user.isNew) {
+    const session = this.$session();
+    if (session) console.log("session alive in user pre hook!!!");
+    let id = await getNextDocumentId("userId", session);
+    user._id = id;
   }
   next();
 });

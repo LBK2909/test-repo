@@ -1,19 +1,70 @@
 const httpStatus = require("http-status");
-const { User } = require("../models");
+const { User, Tenant } = require("../models");
 const ApiError = require("../utils/ApiError");
 const CustomError = require("../utils/CustomError");
+
+/** Create a tenant
+ *  @param {Object} tenantBody
+ *  @returns {Promise<Tenant>}
+ */
+const createTenant = async (body, session) => {
+  if (await Tenant.isEmailTaken(body.email)) {
+    throw new CustomError(httpStatus.BAD_REQUEST, "Email already taken");
+  }
+  let tenantBody = {
+    name: body.name,
+    email: body.email,
+    userId: body._id,
+  };
+
+  const tenant = new Tenant(tenantBody);
+  await tenant
+    .save({ session })
+    .then((res) => {
+      console.log("tenant creation response....");
+      return res;
+    })
+    .catch((err) => {
+      console.log("error", err);
+      throw new CustomError(httpStatus.BAD_REQUEST, "Tenant creation failed..Please try again..");
+      console.log(err);
+    });
+  return tenant;
+  let newTanant = await Tenant.create(tenant, { session })
+    .then((res) => {
+      return res;
+    })
+    .catch((err) => {
+      console.log("error", err);
+      throw new CustomError(httpStatus.BAD_REQUEST, "Tenant creation failed..Please try again..");
+    });
+  return newTanant;
+};
 
 /**
  * Create a user
  * @param {Object} userBody
  * @returns {Promise<User>}
  */
-const createUser = async (userBody) => {
-  console.log("create user....");
+const createUser = async (userBody, session) => {
+  if (session && session.inTransaction()) {
+    // console.log("session", session);
+  }
   if (await User.isEmailTaken(userBody.email)) {
     throw new CustomError(httpStatus.BAD_REQUEST, "Email already taken");
   }
-  return User.create(userBody);
+
+  const user = new User(userBody);
+  await user
+    .save({ session })
+    .then((res) => {
+      // console.log(res);
+    })
+    .catch((err) => {
+      // console.log("user creation error....");
+      // console.log(err);
+    });
+  return user;
 };
 
 /**
@@ -36,7 +87,13 @@ const queryUsers = async (filter, options) => {
  * @returns {Promise<User>}
  */
 const getUserById = async (id) => {
-  return User.findById(id);
+  return User.findById(id)
+    .then((res) => {
+      return res;
+    })
+    .catch((err) => {
+      console.log(err);
+    });
 };
 
 /**
@@ -83,6 +140,7 @@ const deleteUserById = async (userId) => {
 
 module.exports = {
   createUser,
+  createTenant,
   queryUsers,
   getUserById,
   getUserByEmail,

@@ -1,13 +1,17 @@
 const express = require("express");
 const devRoute = require("./dev.route");
 const config = require("../config/config");
-
+const shippingRoute = require("./shipping.route");
 const router = express.Router();
 
 const defaultRoutes = [
   {
     path: "/",
     route: devRoute,
+  },
+  {
+    path: "/shipping",
+    route: shippingRoute,
   },
 ];
 
