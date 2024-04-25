@@ -1,42 +1,40 @@
 const httpStatus = require("http-status");
-const { User, Tenant } = require("../models");
+const { User, Organization } = require("../models");
 const ApiError = require("../utils/ApiError");
 const CustomError = require("../utils/CustomError");
 
-/** Create a tenant
- *  @param {Object} tenantBody
- *  @returns {Promise<Tenant>}
+/** Create a organization
+ *  @param {Object} organizationBody
+ *  @returns {Promise<Organization>}
  */
-const createTenant = async (body, session) => {
-  if (await Tenant.isEmailTaken(body.email)) {
+const createOrganization = async (body, session) => {
+  if (await Organization.isEmailTaken(body.email)) {
     throw new CustomError(httpStatus.BAD_REQUEST, "Email already taken");
   }
-  let tenantBody = {
+
+  let organizationBody = {
     name: body.name,
     email: body.email,
     userId: body._id,
   };
-
-  const tenant = new Tenant(tenantBody);
-  await tenant
+  const organization = new Organization(organizationBody);
+  await organization
     .save({ session })
     .then((res) => {
-      console.log("tenant creation response....");
       return res;
     })
     .catch((err) => {
       console.log("error", err);
-      throw new CustomError(httpStatus.BAD_REQUEST, "Tenant creation failed..Please try again..");
+      throw new CustomError(httpStatus.BAD_REQUEST, "Organization creation failed..Please try again..");
       console.log(err);
     });
-  return tenant;
-  let newTanant = await Tenant.create(tenant, { session })
+  let newTanant = await Organization.create(organization, { session })
     .then((res) => {
       return res;
     })
     .catch((err) => {
       console.log("error", err);
-      throw new CustomError(httpStatus.BAD_REQUEST, "Tenant creation failed..Please try again..");
+      throw new CustomError(httpStatus.BAD_REQUEST, "Organization creation failed..Please try again..");
     });
   return newTanant;
 };
@@ -47,9 +45,6 @@ const createTenant = async (body, session) => {
  * @returns {Promise<User>}
  */
 const createUser = async (userBody, session) => {
-  if (session && session.inTransaction()) {
-    // console.log("session", session);
-  }
   if (await User.isEmailTaken(userBody.email)) {
     throw new CustomError(httpStatus.BAD_REQUEST, "Email already taken");
   }
@@ -57,9 +52,7 @@ const createUser = async (userBody, session) => {
   const user = new User(userBody);
   await user
     .save({ session })
-    .then((res) => {
-      // console.log(res);
-    })
+    .then((res) => {})
     .catch((err) => {
       // console.log("user creation error....");
       // console.log(err);
@@ -140,7 +133,7 @@ const deleteUserById = async (userId) => {
 
 module.exports = {
   createUser,
-  createTenant,
+  createOrganization,
   queryUsers,
   getUserById,
   getUserByEmail,

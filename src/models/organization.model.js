@@ -1,12 +1,27 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const { getNextDocumentId } = require("../utils/db.js");
+const validator = require("validator");
 
-const tenantSchema = new Schema(
+const organizationSchema = new Schema(
   {
     _id: Number,
-    name: { type: String, required: true },
-    userId: { type: Number, required: true },
+    organizationName: { type: String, required: true },
+    userId: { type: Number, default: null },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      validate(value) {
+        if (!validator.isEmail(value)) {
+          throw new CustomError(httpStatus.BAD_REQUEST, "Invalid email address");
+        }
+      },
+    },
+    configurationSetup: { type: Boolean, default: false },
+
     // contactInformation: {
     //   email: { type: String, required: true },
     //   phone: String,
@@ -66,7 +81,7 @@ const tenantSchema = new Schema(
     //       endpoint: String,
     //     },
     //   },
-    //   customFields: Schema.Types.Mixed, // Flexible field for tenant-specific data
+    //   customFields: Schema.Types.Mixed, // Flexible field for organization-specific data
     //   status: { type: String, required: true, enum: ["active", "inactive", "pending"] },
     //   createdAt: { type: Date, default: Date.now },
     //   updatedAt: { type: Date, default: Date.now },
@@ -87,21 +102,19 @@ const tenantSchema = new Schema(
   { _id: false }
 );
 
-tenantSchema.pre("save", async function (next) {
-  const tenant = this;
-  if (tenant.isNew) {
-    const session = this.$session();
-    if (session) console.log("session alive in tenant pre hook!!!");
-    let id = await getNextDocumentId("tenantId", session);
-    tenant._id = id;
+organizationSchema.pre("save", async function (next) {
+  const organization = this;
+  if (organization.isNew) {
+    let id = await getNextDocumentId("organizationId");
+    organization._id = id;
   }
   next();
 });
 
-tenantSchema.statics.isEmailTaken = async function (email, excludeUserId) {
+organizationSchema.statics.isEmailTaken = async function (email, excludeUserId) {
   const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
   return !!user;
 };
-const Tenant = mongoose.model("Tenant", tenantSchema);
+const Organization = mongoose.model("Organization", organizationSchema);
 
-module.exports = Tenant;
+module.exports = Organization;

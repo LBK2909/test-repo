@@ -4,14 +4,24 @@ var passport = require("../config/passport");
 const authController = require("../controllers/auth.controller");
 const { authValidation, validate } = require("../validations/index");
 const router = express.Router();
+let axios = require("axios");
+const bcrypt = require("bcryptjs");
+const logger = require("../config/logger");
+// const { Shop } = require("../models/shop.model");
+const CustomError = require("../utils/customError");
+const { Shop, ShopifyShop } = require("../models/shop.model");
 
 router.post("/register", authValidation.register(), validate, authController.register);
+// router.post("/register-shopify", authValidation.registerViaShopify(), validate, authController.registerViaShopify);
 router.post("/login", authValidation.login(), validate, authController.login);
 router.post("/logout", authController.logout);
 // Triggers the Google OAuth flow
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 // Callback route that Google will redirect to
 router.get("/google/callback", passport.authenticate("google", { failureRedirect: "/login" }), authController.googleAuthCallback);
+// auth/shopify/callback route with simple callback function
+router.get("/shopify", authController.shopifyAppVerification);
+router.get("/shopify/callback", authController.shopifyAppInstallation);
 
 // router.post('/register', validate(authValidation.register), authController.register);
 // router.post('/login', validate(authValidation.login), authController.login);

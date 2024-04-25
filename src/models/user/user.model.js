@@ -8,18 +8,24 @@ const { getNextDocumentId } = require("../../utils/db.js");
 const userSchema = mongoose.Schema(
   {
     _id: Number,
-    tenantId: {
+    organizationId: {
       type: Number,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "tenant",
+      ref: "organization",
     },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+
+    organizations: [
+      {
+        organizationId: {
+          type: Number,
+          ref: "organization",
+        },
+        name: String,
+        roles: [String],
+      },
+    ],
     email: {
       type: String,
       required: true,
@@ -89,9 +95,7 @@ userSchema.pre("save", async function (next) {
     user.password = await bcrypt.hash(user.password, 8);
   }
   if (user.isNew) {
-    const session = this.$session();
-    if (session) console.log("session alive in user pre hook!!!");
-    let id = await getNextDocumentId("userId", session);
+    let id = await getNextDocumentId("userId");
     user._id = id;
   }
   next();

@@ -2,6 +2,7 @@ const express = require("express");
 const devRoute = require("./dev.route");
 const config = require("../config/config");
 const shippingRoute = require("./shipping.route");
+const organizationRoute = require("./organization.route");
 const router = express.Router();
 
 const defaultRoutes = [
@@ -12,6 +13,10 @@ const defaultRoutes = [
   {
     path: "/shipping",
     route: shippingRoute,
+  },
+  {
+    path: "/organization",
+    route: organizationRoute,
   },
 ];
 

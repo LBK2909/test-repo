@@ -1,30 +1,57 @@
 const httpStatus = require("http-status");
 const catchAsync = require("../utils/catchAsync");
-const { authService, userService, tokenService, emailService } = require("../services");
-const { User } = require("../models");
+const { authService, userService, tokenService, shopifyService } = require("../services");
+const { User, Organization } = require("../models");
+const CustomError = require("../utils/customError");
+const { Shop, ShopifyShop } = require("../models/shop.model");
 
 const mongoose = require("mongoose");
 exports.register = catchAsync(async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  let organizationCreated = null;
+  let userCreated = null;
   try {
-    const user = await userService.createUser(req.body, session);
-    console.log("user....", user);
-    const tenant = await userService.createTenant(user, session);
-    console.log({ tenant });
-    // const tokens = await tokenService.generateAuthTokens(user);
-    let updateUser = await User.findById(user._id).session(session);
-    updateUser.tenantId = tenant._id;
-    await updateUser.save({ session });
-    // let updateUser = await userService.updateUserById(user._id, { tenantId: tenant._id });
-    await session.commitTransaction();
-    session.endSession();
-    // res.status(httpStatus.CREATED).send({ user, tokens });
+    // create a new organization with the email and name from the request
+    const organization = await Organization.create({
+      organizationName: req.body.organizationName,
+      email: req.body.email,
+      configurationSetup: true,
+    });
+    //get the organization id from the above created organization
+    const organizationId = organization._id;
+    organizationCreated = organization;
+    //regsiter a new user with the above four fields
+    const user = await User.create({
+      email: req.body.email,
+      password: req.body.password,
+      PhoneNumber: req.body.PhoneNumber,
+      organizations: [
+        {
+          organizationId: organizationId,
+          name: req.body.organizationName,
+          roles: ["admin"],
+        },
+      ],
+    });
+    user.save();
+    userCreated = user;
+
+    //add the user id to the organization
+    organization.userId = user._id;
+    organization.save();
+    const tokens = await tokenService.generateAuthTokens(user);
+    res.send({ user, tokens });
   } catch (error) {
-    console.log("error....", error);
-    await session.abortTransaction();
-    session.endSession();
+    console.log("Registration failed:", error);
+    // If an error occurs, attempt to rollback changes
+    if (userCreated) {
+      await User.deleteOne({ _id: userCreated._id });
+    }
+    if (organizationCreated) {
+      await Organization.deleteOne({ _id: organizationCreated._id });
+    }
+    res.status(500).send({ message: "Registration failed, changes were rolled back", error });
   }
+  //redirect the user to the signup page
 });
 
 exports.login = catchAsync(async (req, res) => {
@@ -55,6 +82,30 @@ exports.logout = catchAsync(async (req, res) => {
   res.status(httpStatus.NO_CONTENT).send();
 });
 
+exports.shopifyAppVerification = catchAsync(async (req, res) => {
+  const shop = req.query.shop || null;
+  if (!shop) {
+    return res.status(400).send("Missing shop parameter. Please add ?shop=your-development-shop.myshopify.com to your request");
+  }
+
+  try {
+    const result = await shopifyService.authenticateShop(shop);
+    res.redirect(result.url);
+  } catch (error) {
+    console.error("Authentication error:", error);
+    res.status(500).send(error.message);
+  }
+});
+exports.shopifyAppInstallation = catchAsync(async (req, res) => {
+  let { code, shop } = req.query;
+  try {
+    let result = await shopifyService.installShopifyApp(shop, code);
+    res.redirect(result.url);
+  } catch (error) {
+    console.error("Installation error:", error);
+    res.status(500).send(error.message);
+  }
+});
 // const refreshTokens = catchAsync(async (req, res) => {
 //   const tokens = await authService.refreshAuth(req.body.refreshToken);
 //   res.send({ ...tokens });

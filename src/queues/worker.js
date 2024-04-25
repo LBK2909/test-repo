@@ -27,10 +27,10 @@ const worker = new Worker(
   { connection: connectionOptions }
 );
 
-worker.on("completed", (job) => {
-  console.log(`Job ${job.id} has completed!`);
-});
+// worker.on("completed", (job) => {
+//   console.log(`Job ${job.id} has completed!`);
+// });
 
-worker.on("failed", (job, err) => {
-  console.error(`Job ${job.id} has failed with error ${err.message}`);
-});
+// worker.on("failed", (job, err) => {
+//   console.error(`Job ${job.id} has failed with error ${err.message}`);
+// });
