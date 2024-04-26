@@ -11,7 +11,6 @@ const shopSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-
     // Add other common fields here
   },
   {
@@ -33,7 +32,6 @@ const Shop = mongoose.model("Shop", shopSchema);
 // Create the Shopify model as a discriminator of the base model
 const ShopifyShop = Shop.discriminator("Shopify", shopifySchema);
 
-module.exports = Shop;
 module.exports = {
   Shop,
   ShopifyShop,

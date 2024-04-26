@@ -1,5 +1,5 @@
 // const SocketManager = require("../sockets/socketManager").getInstance();
-const shippingQueue = require("../queues/shippingQueue");
+// const shippingQueue = require("../queues/shippingQueue");
 const { shippingService } = require("../services");
 const { Job } = require("../models");
 
