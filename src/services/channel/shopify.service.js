@@ -1,9 +1,10 @@
-const { Shop } = require("../../models/shop.model");
 const bcrypt = require("bcryptjs");
 let axios = require("axios");
 const CustomError = require("../../utils/customError");
 const httpStatus = require("http-status");
-let { ShopifyShop } = require("../../models/shop.model");
+let { ShopifyShop, Shop } = require("../../models/shop.model");
+const { Order } = require("../../models");
+const shopify = require("../../integrations/marketplaces/shopify");
 async function authenticateShop(shop) {
   const existingShop = await Shop.findOne({ name: shop });
   if (existingShop) {
@@ -25,7 +26,7 @@ async function authenticateShop(shop) {
   }
   const clientId = process.env.SHOPIFY_CLIENT_ID;
   const redirectUri = `${process.env.SERVER_BASE_URL}/auth/shopify/callback`;
-  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=read_products&state=${salt}&redirect_uri=${redirectUri}`;
+  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=read_products,read_orders&state=${salt}&redirect_uri=${redirectUri}`;
 
   return { url: installUrl };
 }
@@ -72,7 +73,108 @@ async function installShopifyApp(shop, code) {
     throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error getting access token");
   }
 }
+
+/**
+ * Fetches and updates orders for a specified shop from Shopify.
+ * This function queries the database for shop details, fetches orders from Shopify,
+ * converts them to the required format, and updates the local database.
+ *
+ * @param {string} shop - The name of the shop whose orders are to be fetched.
+ * @returns {Promise<string>} - A promise that resolves to a success message indicating
+ *                              that orders were successfully updated, or rejects with an
+ *                              error if any issues occur.
+ * @throws {CustomError} - Throws an error if the shop is not found or if any part of the
+ *                         order processing fails, with an appropriate HTTP status code.
+ */
+async function fetchOrders(shop) {
+  // Retrieve shop details from the database
+  const shopDetails = await ShopifyShop.findOne({ name: shop });
+  if (!shopDetails) {
+    console.log("shop not found...");
+    throw new CustomError(httpStatus.NOT_FOUND, "Shop not found");
+  }
+
+  //get the latest orderId from the orders collection
+  const latestOrder = await Order.findOne({ shopId: shopDetails._id }).sort({ orderId: -1 });
+  const latestOrderId = latestOrder ? latestOrder.orderId : null;
+  // Set up Shopify API client with the shop's details
+  const shopifyClient = new shopify(shopDetails.accessToken, shopDetails.storeUrl);
+  // Fetch orders from Shopify and process them
+  let response = await fetchOrdersAPI({ latestOrderId });
+  return response;
+
+  /**
+   * Recursively fetches orders from Shopify and updates the local database.
+   * Handles pagination by recursively calling itself if more pages are available.
+   *
+   * @param {object} params - Parameters for fetching orders including the latest order ID and pagination link.
+   * @returns {Promise<string>} - A promise that resolves after all pages have been fetched and processed.
+   * @throws {CustomError} - Throws an error if fetching or processing fails.
+   */
+  async function fetchOrdersAPI(params) {
+    try {
+      let { latestOrderId, link } = params;
+      let payloadObj = {
+        latestOrderId,
+        link,
+      };
+
+      // Fetch orders using the Shopify client
+      const response = await shopifyClient.fetchOrders(payloadObj);
+      const orders = response.orders || [];
+
+      // Convert and insert orders into the database
+      const convertedOrders = orders.map((order) => {
+        return {
+          shopId: shopDetails._id,
+          name: order.name,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          totalPrice: order.total_price,
+          lineItems: order.line_items,
+          shippingAddress: order.shipping_address,
+          billingAddress: order.billing_address,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+          // paymentGateway: order.payment_gateway_names,
+          financialStatus: order.financial_status,
+        };
+      });
+      await Order.insertMany(convertedOrders);
+
+      // Handle pagination
+      let headerLink = parseLinkHeader(response.headerLink);
+      if (headerLink.next) {
+        await fetchOrdersAPI({ link: headerLink });
+      }
+      return "Orders updated successfully";
+    } catch (error) {
+      // console.log("error code in http status httpStatus.INTERNAL_SERVER_ERROR===", httpStatus.INTERNAL_SERVER_ERROR);
+      throw new CustomError(error.statusCode || 500, error.message || "Error updating orders");
+    }
+  }
+}
+function parseLinkHeader(link) {
+  if (!link) {
+    return {};
+  }
+  const links = link.split(",");
+  const parsedLinks = {};
+  links.forEach((link) => {
+    const [url, rel] = link.split(";");
+    const urlMatch = url.match(/page_info=(.*)>/);
+    const relMatch = rel.match(/rel="(.*)"/);
+    if (urlMatch && relMatch) {
+      parsedLinks[relMatch[1]] = urlMatch[1];
+    }
+  });
+  return parsedLinks;
+}
+//   this.link = parsedLinks;
+//   this.updatePaginateButton = ~this.updatePaginateButton;
 module.exports = {
   authenticateShop,
   installShopifyApp,
+  fetchOrders,
+  parseLinkHeader,
 };

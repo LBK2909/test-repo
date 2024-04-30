@@ -97,7 +97,7 @@ describe("Shopify Service", () => {
 
       const result = await authenticateShop("testShop");
 
-      const expectedUrl = `https://testShop/admin/oauth/authorize?client_id=${process.env.SHOPIFY_CLIENT_ID}&scope=read_products&state=test_salt&redirect_uri=${process.env.SERVER_BASE_URL}/auth/shopify/callback`;
+      const expectedUrl = `https://testShop/admin/oauth/authorize?client_id=${process.env.SHOPIFY_CLIENT_ID}&scope=read_products,read_orders&state=test_salt&redirect_uri=${process.env.SERVER_BASE_URL}/auth/shopify/callback`;
       expect(result).toEqual({ url: expectedUrl });
     });
 
