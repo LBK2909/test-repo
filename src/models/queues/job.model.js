@@ -43,15 +43,14 @@ const jobSchema = new Schema(
 );
 
 jobSchema.post("findOneAndUpdate", function (doc) {
-  console.log("updateOne hook called....");
   //get the updated fields
 
-  console.log(doc);
   if (doc) {
     //check if the summary.totalOrders are equal to summary.completedOrders + summary.failedOrders
     if (doc.summary) {
       let { totalOrders, completedOrders, failedOrders } = doc.summary;
       if (totalOrders === completedOrders + failedOrders) {
+        console.log("All orders are processed.... updating the job status to completed");
         //update the status of the job to completed
         this.model.updateOne({ _id: doc._id }, { $set: { status: "completed" } });
       }

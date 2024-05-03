@@ -1,16 +1,19 @@
 const { Job } = require("../../models");
+const mongoose = require("mongoose");
 async function delhiveryCourier(jobData) {
   try {
     let { jobId } = jobData;
-    //use update one query to update the job status and completed orders count
     let docs = await Job.findOneAndUpdate(
-      //   { _id: mongoose.Types.ObjectId(jobId) },
       { _id: jobId },
       { $set: { status: "processing" }, $inc: { "summary.completedOrders": 1 } },
       { new: true }
-    );
-
-    return;
+    )
+      .then((data) => {
+        return data;
+      })
+      .catch((err) => {
+        console.log("error in delhiveryCourier service...", err);
+      });
   } catch (err) {
     console.log("error in delhiveryCourier service...", err);
   }

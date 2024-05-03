@@ -1,36 +1,47 @@
 const { Worker } = require("bullmq");
-const IORedis = require("ioredis");
-const connectDB = require("../config/db");
-
-// const { generateLabel, sendShippingEmail, delhiveryCourier } = require("../services/booking.service.js");
-connectDB();
 const { shippingService } = require("../services");
+const shippingQueue = require("../queues/shippingQueue");
+const connectDB = require("../config/db");
+connectDB();
 
-console.log("worker js file executed!!!");
-const connection = new IORedis();
-// Define Redis connection options
-const connectionOptions = {
-  host: "localhost", // or your Redis server host
-  port: 6379, // or your Redis server port
-  // Set maxRetriesPerRequest to null as required by BullMQ
-  maxRetriesPerRequest: null,
-};
-const worker = new Worker(
-  "shipping",
-  async (job) => {
-    if (job.name === "generateLabel") {
-      await shippingService.delhiveryCourier(job.data);
-    } else if (job.name === "sendEmail") {
-      await sendShippingEmail(job.data);
+// This script defines a function to start a BullMQ worker for processing jobs from the "shipping" queue.
+// It initializes a worker instance, defines a job handler function, and configures the worker to connect to a Redis server.
+// The worker processes incoming jobs using a service function and handles any errors that occur during processing.
+// Additionally, it ensures that the queue is drained and cleaned before starting the worker to maintain a clean state.
+// Finally, the function is exported to make it accessible to other modules.
+
+const startWorker = async () => {
+  const worker = new Worker(
+    "shipping",
+    async (job) => {
+      try {
+        if (job.name === "generateLabel") {
+          await shippingService.delhiveryCourier(job.data);
+        }
+      } catch (err) {
+        // Log the error
+        console.error("Error processing job:", err);
+        // Mark the job as failed
+        await job.moveToFailed(err, true);
+      }
+    },
+    {
+      connection: {
+        host: "localhost", // Redis server host
+        port: 6379, // Redis server port
+      },
+      maxRetriesPerRequest: null,
     }
-  },
-  { connection: connectionOptions }
-);
+  );
+  // Get the shipping queue instance
+  const queue = await shippingQueue;
 
-// worker.on("completed", (job) => {
-//   console.log(`Job ${job.id} has completed!`);
-// });
+  // Drain the queue, processing all pending jobs
+  await queue.drain(true);
 
-// worker.on("failed", (job, err) => {
-//   console.error(`Job ${job.id} has failed with error ${err.message}`);
-// });
+  // Clean the queue, removing all completed and failed jobs
+  await queue.clean(0);
+  return worker;
+};
+
+module.exports = { startWorker };

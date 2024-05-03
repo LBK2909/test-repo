@@ -7,7 +7,8 @@
     "test": "jest -i --colors --verbose --detectOpenHandles",
     "test:watch": "jest -i --watchAll",
     "start": "sudo node src/server.js --mode production",
-    "dev": "nodemon src/localServer.js --mode development"
+    "dev": "nodemon src/localServer.js --mode development",
+    "worker": "nodemon src/queues/exec.js"
   },
   "keywords": [],
   "author": "",
