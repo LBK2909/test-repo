@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const routes = require("./routes");
 const authRoutes = require("./routes/auth.route"); // Import auth routes
@@ -11,14 +12,34 @@ const CustomError = require("./utils/CustomError");
 const { errorHandler, errorConverter } = require("./middlewares/error.middleware");
 var session = require("express-session");
 var passport = require("passport");
+require("./config/winston_logger");
+let { delhiveryController } = require("./controllers/shipping/couriersPartners");
+let shippingController = require("./controllers/shipping.controller");
+let shopifyController = require("./controllers/salesChannels/shopify.controller");
+// let { delhiveryController } = require("./controller/courierPartners");
 require("./config/logger");
 
-// Example route that throws an error
 const app = express();
 connectDB();
-
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      const allowedOrigins = ["https://localhost:5173"];
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS policy violation"));
+      }
+    },
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "Access-Token"], // Include your custom header here
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  })
+);
+
+app.use(cookieParser());
+// app.use(cors(corsOptions));
 app.use(morgan("dev"));
 app.use(bodyParser.json());
 // v1 api routes
@@ -49,4 +70,9 @@ app.use(errorHandler);
 // app.listen(PORT, () => {
 //   console.log(`Server is running on port ${PORT}`);
 // });
+setTimeout(() => {
+  // delhiveryController.createShipment();
+  // shippingController.shipmentBooking();
+  // shopifyController.syncOrders();
+}, 2000);
 module.exports = app;

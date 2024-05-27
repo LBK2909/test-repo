@@ -8,4 +8,7 @@ const router = express.Router();
 
 router.get("/test-endpoint", auth.verifyToken, testController.testMethod);
 
+router.get("/get-crypkeys", async (req, res) => {
+  res.send({ crykey: process.env.CRYKEY });
+});
 module.exports = router;

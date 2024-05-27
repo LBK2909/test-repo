@@ -3,7 +3,6 @@ async function delhiveryCourier() {
   setTimeout(() => {
     SocketManager.emitToAll("welcome", { status: "welcome  Event from the server..." });
   }, 1000);
-  return;
 
   let wayBillNumber = await wayBillGeneration();
   console.log("wayBillNumber : ", wayBillNumber);

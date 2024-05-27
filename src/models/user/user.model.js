@@ -24,6 +24,7 @@ const userSchema = mongoose.Schema(
         },
         name: String,
         roles: [String],
+        default: [],
       },
     ],
     email: {

@@ -1,5 +1,5 @@
 require("dotenv").config({ path: ".env.production" });
-const app = require("./src/app");
+const app = require("./app");
 
 // Remote AWS server configuration
 

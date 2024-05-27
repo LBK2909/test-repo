@@ -10,7 +10,8 @@ To use the shipping label generation feature, clients need to follow these steps
 
 1. **Authentication**: Clients must authenticate themselves with the server to access the API endpoints.
 
-2. **Initiate Bulk Shipment Processing**: Clients can initiate bulk shipment processing by sending a POST request to the `/shipments` endpoint. The request should include the necessary shipment details, such as sender information, recipient information, and package details.
+2. **Initiate Bulk Shipment Processing**: Clients can initiate bulk shipment processing by sending a POST request to the `/shipment-booking` endpoint. The request should include the necessary shipment details, such as sender information, recipient information, and package details.
+   **_Note:_** This bulk shipment processing only supports orders greater than 1.
 
 3. **Response**: Upon successful request, the server will respond with a unique Job ID. Clients should store this ID for future reference.
 

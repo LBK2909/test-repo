@@ -16,7 +16,7 @@ jest.mock("../../src/models", () => ({
 // Assuming these are the paths to your modules
 jest.mock("../../src/models/Order.model.js");
 
-jest.mock("../../src/integrations/marketplaces/shopify.js", () => {
+jest.mock("../../src/integrations/salesChannels/shopify.js", () => {
   return jest.fn().mockImplementation(() => ({
     fetchOrders: jest
       .fn()
@@ -60,7 +60,7 @@ jest.mock("../../src/integrations/marketplaces/shopify.js", () => {
 const httpStatus = require("http-status");
 const { ShopifyShop } = require("../../src/models/shop.model.js");
 const { Order } = require("../../src/models");
-const Shopify = require("../../src/integrations/marketplaces/shopify.js"); // This should be your actual import path
+const Shopify = require("../../src/integrations/salesChannels/shopify.js"); // This should be your actual import path
 const CustomError = require("../../src/utils/customError");
 const { fetchOrders, parseLinkHeader } = require("../../src/services/channel/shopify.service"); // Adjust the import path
 

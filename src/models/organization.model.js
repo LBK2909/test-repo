@@ -8,18 +8,6 @@ const organizationSchema = new Schema(
     _id: Number,
     organizationName: { type: String, required: true },
     userId: { type: Number, default: null },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
-      validate(value) {
-        if (!validator.isEmail(value)) {
-          throw new CustomError(httpStatus.BAD_REQUEST, "Invalid email address");
-        }
-      },
-    },
     configurationSetup: { type: Boolean, default: false },
 
     // contactInformation: {

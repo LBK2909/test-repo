@@ -3,15 +3,21 @@ let axios = require("axios");
 const CustomError = require("../../utils/customError");
 const httpStatus = require("http-status");
 let { ShopifyShop, Shop } = require("../../models/shop.model");
-const { Order } = require("../../models");
-const shopify = require("../../integrations/marketplaces/shopify");
+const { Order, OrderSyncJob } = require("../../models");
+const shopify = require("../../integrations/salesChannels/shopify");
+const { orderSyncQueue } = require("../../workers/queues");
+
 async function authenticateShop(shop) {
   const existingShop = await Shop.findOne({ name: shop });
+  console.log({ existingShop });
   if (existingShop) {
     if (existingShop.organizationId) {
-      return { url: `${process.env.CLIENT_BASE_URL}/organizations` };
+      return { url: `${process.env.CLIENT_BASE_URL}/organizations`, newShop: false };
     } else {
-      return { url: `${process.env.CLIENT_BASE_URL}/channel-management?shop=${shop}&install=true&channel=shopify` };
+      return {
+        url: `${process.env.CLIENT_BASE_URL}/channel-management?shop=${shop}&install=true&channel=shopify`,
+        newShop: false,
+      };
     }
   }
   let salt = null;
@@ -28,7 +34,7 @@ async function authenticateShop(shop) {
   const redirectUri = `${process.env.SERVER_BASE_URL}/auth/shopify/callback`;
   const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=read_products,read_orders&state=${salt}&redirect_uri=${redirectUri}`;
 
-  return { url: installUrl };
+  return { url: installUrl, newShop: true };
 }
 
 async function installShopifyApp(shop, code) {
@@ -67,7 +73,7 @@ async function installShopifyApp(shop, code) {
       await newShop.save();
       console.log("Shop and Organization created successfully");
     }
-    const redirectURI = `http://localhost:5173/organizations?shop=${shop}&email=${shopResponse.data.shop.email}&install=true&channel=shopify`;
+    const redirectURI = `http://localhost:5173/channel-management?shop=${shop}&email=${shopResponse.data.shop.email}&install=true&channel=shopify`;
     return { url: redirectURI };
   } catch (error) {
     throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error getting access token");
@@ -86,9 +92,48 @@ async function installShopifyApp(shop, code) {
  * @throws {CustomError} - Throws an error if the shop is not found or if any part of the
  *                         order processing fails, with an appropriate HTTP status code.
  */
-async function fetchOrders(shop) {
+
+async function initiateSyncingProcess(shopId) {
+  console.log("initiate syncing process...");
+  console.log({ shopId });
+  const existingOrderSyncJob = await checkIfAnySyncIsAlreadyInProgress(shopId);
+  console.log(existingOrderSyncJob);
+  if (existingOrderSyncJob) {
+    return existingOrderSyncJob._id;
+  }
+  const job = new OrderSyncJob({
+    shopId: shopId,
+    status: "processing",
+  });
+  await job.save();
+
+  job.channel = "shopify";
+
+  await orderSyncQueue.add("shopify", job, {
+    removeOnComplete: true, // Automatically remove job data on completion
+    removeOnFail: false, // Automatically remove job data on failure
+  });
+  return job._id;
+}
+
+async function checkIfAnySyncIsAlreadyInProgress(shopId) {
+  console.log("check order sync in progress method..".bold.green);
+  const orderSyncJob = await OrderSyncJob.findOne({ shopId: shopId, status: "processing" })
+    .then((data) => {
+      console.log(data);
+      return data;
+    })
+    .catch((err) => {
+      throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error checking if any sync is already in progress");
+    });
+  return orderSyncJob;
+}
+
+async function fetchOrders(params) {
+  let shopId = params.shopId;
+  let jobId = params._id;
   // Retrieve shop details from the database
-  const shopDetails = await ShopifyShop.findOne({ name: shop });
+  const shopDetails = await ShopifyShop.findById(shopId);
   if (!shopDetails) {
     console.log("shop not found...");
     throw new CustomError(httpStatus.NOT_FOUND, "Shop not found");
@@ -101,6 +146,10 @@ async function fetchOrders(shop) {
   const shopifyClient = new shopify(shopDetails.accessToken, shopDetails.storeUrl);
   // Fetch orders from Shopify and process them
   let response = await fetchOrdersAPI({ latestOrderId });
+  console.log("all orders fetched sucessfully...");
+  // Update the job status to "completed"
+  await OrderSyncJob.updateOne({ _id: jobId }, { status: "completed" });
+  console.log("jobs ");
   return response;
 
   /**
@@ -111,6 +160,7 @@ async function fetchOrders(shop) {
    * @returns {Promise<string>} - A promise that resolves after all pages have been fetched and processed.
    * @throws {CustomError} - Throws an error if fetching or processing fails.
    */
+
   async function fetchOrdersAPI(params) {
     try {
       let { latestOrderId, link } = params;
@@ -154,6 +204,7 @@ async function fetchOrders(shop) {
     }
   }
 }
+
 function parseLinkHeader(link) {
   if (!link) {
     return {};
@@ -177,4 +228,5 @@ module.exports = {
   installShopifyApp,
   fetchOrders,
   parseLinkHeader,
+  initiateSyncingProcess,
 };

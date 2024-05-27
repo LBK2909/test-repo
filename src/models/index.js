@@ -4,3 +4,4 @@ module.exports.Organization = require("./organization.model");
 module.exports.Counter = require("./counter.model");
 module.exports.Job = require("./queues/job.model");
 module.exports.Order = require("./order.model");
+module.exports.OrderSyncJob = require("./queues/orderSyncJobs");

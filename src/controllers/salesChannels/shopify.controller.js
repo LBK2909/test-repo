@@ -3,8 +3,10 @@ const ShopifyService = require("../../services/channel/shopify.service.js");
 
 async function syncOrders(req, res) {
   try {
-    // Call the abstraction module from Shopify services
-    const data = await ShopifyService.fetchOrders("cobay-demo-store.myshopify.com");
+    let shopId = req.params.shopId;
+    console.log("sync orders method controller...");
+    const data = await ShopifyService.initiateSyncingProcess(shopId);
+    console.log(data);
     res.json(data);
   } catch (error) {
     console.log(error);

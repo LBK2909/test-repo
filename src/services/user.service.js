@@ -81,6 +81,7 @@ const queryUsers = async (filter, options) => {
  */
 const getUserById = async (id) => {
   return User.findById(id)
+    .select("-password")
     .then((res) => {
       return res;
     })

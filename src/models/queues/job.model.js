@@ -52,7 +52,14 @@ jobSchema.post("findOneAndUpdate", function (doc) {
       if (totalOrders === completedOrders + failedOrders) {
         console.log("All orders are processed.... updating the job status to completed");
         //update the status of the job to completed
-        this.model.updateOne({ _id: doc._id }, { $set: { status: "completed" } });
+        this.model
+          .updateOne({ _id: doc._id }, { $set: { status: "completed" } })
+          .then((result) => {
+            console.log("Job status updated to completed");
+          })
+          .catch((error) => {
+            console.error("Error updating job status to completed", error);
+          });
       }
     }
   }
