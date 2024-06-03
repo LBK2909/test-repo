@@ -1,7 +1,7 @@
 // const SocketManager = require("../sockets/socketManager").getInstance();
 const shippingQueue = require("../workers/queues/shippingQueue");
 const { shippingService } = require("../services");
-const { Job, Order } = require("../models");
+const { Job, Order, Courier } = require("../models");
 const CustomError = require("../utils/customError");
 const httpStatus = require("http-status");
 
@@ -14,13 +14,14 @@ exports.shipmentBooking = catchAsync(async (req, res) => {
   console.log(req.body);
   console.log("delhivery controller.....");
   let orders = req.body.orders;
-  // let orderIds = orders.map((order) => order.orderId);
-  // let updatedOrders = [];
-  // let ordersToUpdate = await Order.find({ orderId: { $in: orderIds }, status: { $ne: "processing" } });
-  // if (ordersToUpdate.length > 0) {
-  //   await Order.updateMany({ _id: { $in: ordersToUpdate.map((order) => order._id) } }, { status: "processing" });
-  //   updatedOrders = ordersToUpdate.map((order) => order.orderId);
-  // }
+  let orderIds = orders.map((order) => order.orderId);
+  let updatedOrders = [];
+  let ordersToUpdate = await Order.find({ _id: { $in: orders }, status: { $ne: "processing" } });
+  if (ordersToUpdate.length > 0) {
+    const orderIdsToUpdate = ordersToUpdate.map((order) => order._id);
+    await Order.updateMany({ _id: { $in: orderIdsToUpdate } }, { status: "processing" });
+    let processingOrders = ordersToUpdate.map((order) => order.orderId);
+  }
 
   const ORDERS = [
     {
@@ -30,27 +31,26 @@ exports.shipmentBooking = catchAsync(async (req, res) => {
       phone: "1234567890",
       partner: "delhivery",
     },
-    {
-      orderId: "1234",
-      name: "John Doe",
-      address: "1234, 5th cross, 6th main, Bangalore",
-      phone: "1234567890",
-      partner: "delhivery",
-    },
+    // {
+    //   orderId: "1234",
+    //   name: "John Doe",
+    //   address: "1234, 5th cross, 6th main, Bangalore",
+    //   phone: "1234567890",
+    //   partner: "delhivery",
+    // },
   ];
   let totalOrders = ORDERS.length;
   // let totalOrders = updatedOrders.length;
-
-  const job = new Job({
-    name: "generateLabel",
-    status: "processing",
-    summary: {
-      totalOrders: totalOrders,
-      completedOrders: 0,
-      failedOrders: 0,
-    },
-  });
   if (totalOrders > 1) {
+    const job = new Job({
+      name: "generateLabel",
+      status: "processing",
+      summary: {
+        totalOrders: totalOrders,
+        completedOrders: 0,
+        failedOrders: 0,
+      },
+    });
     let newJob = await job.save();
     let pollingIntervalPeriod = totalOrders * 1000;
     res.send({ jobId: newJob._id, pollingIntervalPeriod });
@@ -84,12 +84,13 @@ exports.shipmentBooking = catchAsync(async (req, res) => {
 exports.bulkShipmentStatus = catchAsync(async (req, res) => {
   try {
     const jobId = req.params?.jobId ?? null;
-    let job = Job.findOne({ _id: jobId })
+    let job = await Job.findOne({ _id: jobId })
       .then((data) => {
         return data;
       })
       .catch((err) => {
         console.log(err);
+        throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error checking if any sync is already in progress");
       });
     if (job && job.status === "completed") {
       let orders = job.orders || [];

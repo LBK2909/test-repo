@@ -3,3 +3,5 @@ module.exports.userController = require("./user.controller");
 module.exports.testController = require("./test.controller");
 module.exports.organization = require("./organization.controller");
 module.exports.shippingController = require("./shipping.controller");
+module.exports.orderController = require("./orders.controller");
+module.exports.courierController = require("./courier.controller");

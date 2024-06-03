@@ -15,7 +15,7 @@ const shopSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    discriminatorKey: "channelType",
+    discriminatorKey: "channel",
   }
 );
 

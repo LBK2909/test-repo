@@ -1,10 +1,10 @@
 const express = require("express");
+const router = express.Router();
 const organizationController = require("../controllers/organization.controller");
 // const auth = require("../../middlewares/auth");
 const auth = require("../middlewares/auth.middleware");
 const { organizationValidation, validate } = require("../validations/index");
 const { chainMiddleware } = require("../utils/util");
-const router = express.Router();
 const verifyAuthOnly = chainMiddleware([auth.verifyToken]);
 const verifyAccess = chainMiddleware([auth.verifyToken, auth.verifyUserOrganization]);
 // Middleware to conditionally apply verifyAccess
@@ -17,7 +17,6 @@ const conditionalVerifyAccess = (req, res, next) => {
     verifyAccess(req, res, next); // Apply the verifyAccess middleware
   }
 };
-
 // Apply this conditional middleware globally if all routes go through one entry point
 router.use(conditionalVerifyAccess);
 router.get("/setup/test-endpoint", organizationController.organizationList);
@@ -42,6 +41,12 @@ router.get("/test-org", (req, res) => {
   console.log("test-method updated...");
   res.send("test method updated...");
 });
+router.post(
+  "/connect-courier-to-organization",
+  // organizationValidation.connectCourierToOrganization(),
+  // validate,
+  organizationController.connectCourierToOrganization
+);
 
 function userHasAccessToOrganization(userId, organizationId) {
   // Dummy check for example purposes

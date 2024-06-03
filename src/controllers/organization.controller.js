@@ -1,6 +1,6 @@
 const httpStatus = require("http-status");
 const catchAsync = require("../utils/catchAsync");
-const { User, Organization } = require("../models");
+const { User, Organization, Courier, OrganizationCourier } = require("../models");
 const { Shop, ShopifyShop } = require("../models/shop.model");
 
 const CustomError = require("../utils/customError");
@@ -36,13 +36,13 @@ exports.getInstalledShops = catchAsync(async (req, res) => {
       throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
     });
   // console.log({ shopList });
-  res.status(httpStatus.OK).send({ shopList });
+  res.status(httpStatus.OK).send(shopList);
 });
 ///connectToOrganization module
 exports.connectToOrganization = catchAsync(async (req, res) => {
   try {
-    const { organizationId, shop, userId } = req.body;
-
+    const { shop, organizationId } = req.body;
+    const userId = req.cookies["userId"] || null;
     // check if the user has the necessary permission to add the store
     const user = await User.findById(userId);
     if (!user) {
@@ -59,7 +59,7 @@ exports.connectToOrganization = catchAsync(async (req, res) => {
     console.log("shop name==", shop);
 
     //get the organizationId & shop from the request
-    const existingShop = await ShopifyShop.findOne({ name: shop });
+    const existingShop = await ShopifyShop.findOne({ storeUrl: shop });
     console.log({ existingShop });
     if (existingShop) {
       if (existingShop.organizationId) {
@@ -134,6 +134,55 @@ exports.addNewOrganization = catchAsync(async (req, res) => {
   const organizationList = user.organizations || [];
   res.status(httpStatus.CREATED).send({ organizationList });
 });
+
+exports.connectCourierToOrganization = catchAsync(async (req, res) => {
+  const { courierId, credentials } = req.body;
+  // return;
+  try {
+    let organizationId = parseInt(req.cookies["orgId"]) || null;
+    if (!organizationId) {
+      throw new CustomError(httpStatus.BAD_REQUEST, "Organization ID is required");
+    }
+
+    const orgCourier = await connectCourier(organizationId, courierId, credentials);
+    res.status(httpStatus.OK).send(orgCourier);
+  } catch (error) {
+    console.error(error);
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ message: error.message });
+  }
+});
+async function connectCourier(organizationId, courierId, credentials) {
+  try {
+    // Find the courier to get the required credentials
+    const courier = await Courier.findById(courierId);
+    if (!courier) throw new Error("Courier not found");
+
+    // Construct the credentials map
+    const credentialsMap = new Map();
+    courier.credentials.forEach((key) => {
+      if (credentials.hasOwnProperty(key)) {
+        credentialsMap.set(key, credentials[key]);
+      } else {
+        throw new Error(`Credential ${key} is required but not provided`);
+      }
+    });
+
+    // Create the organization-courier connection
+    const orgCourier = new OrganizationCourier({
+      organizationId,
+      courierId,
+      isActive: true,
+      credentials: credentialsMap,
+    });
+
+    await orgCourier.save();
+    return orgCourier;
+  } catch (error) {
+    console.error("Failed to connect courier to organization:", error);
+    throw error;
+  }
+}
+
 exports.verifyUserRole = (req, res, next) => {
   console.log("verifyUserRoles method....");
   next();

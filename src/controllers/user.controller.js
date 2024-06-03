@@ -17,9 +17,10 @@ const getUsers = catchAsync(async (req, res) => {
 });
 
 const getUser = catchAsync(async (req, res) => {
-  const userId = req.cookies.userId;
+  const userId = req.cookies["userId"] || null;
+  const orgId = req.cookies["orgId"] || null;
   const user = await userService.getUserById(userId);
-  const currentOrganizationId = getCurrentOrganizationId(req.cookies.orgId, user);
+  const currentOrganizationId = getCurrentOrganizationId(orgId, user);
   let response = {
     user: user,
     currentOrganizationId: parseInt(currentOrganizationId),

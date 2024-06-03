@@ -65,7 +65,7 @@ async function installShopifyApp(shop, code) {
       throw new CustomError(httpStatus.BAD_REQUEST, "Shop already exists");
     } else {
       const newShop = new ShopifyShop({
-        name: shopResponse?.data?.shop?.domain,
+        name: shopResponse?.data?.shop?.name,
         email: shopResponse?.data?.shop?.email,
         storeUrl: shopResponse?.data?.shop?.domain,
         accessToken: ACCESS_TOKEN,
@@ -73,7 +73,7 @@ async function installShopifyApp(shop, code) {
       await newShop.save();
       console.log("Shop and Organization created successfully");
     }
-    const redirectURI = `http://localhost:5173/channel-management?shop=${shop}&email=${shopResponse.data.shop.email}&install=true&channel=shopify`;
+    const redirectURI = `${process.env.CLIENT_BASE_URL}/channel-management?shop=${shop}&email=${shopResponse.data.shop.email}&install=true&channel=shopify`;
     return { url: redirectURI };
   } catch (error) {
     throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error getting access token");
@@ -93,9 +93,8 @@ async function installShopifyApp(shop, code) {
  *                         order processing fails, with an appropriate HTTP status code.
  */
 
-async function initiateSyncingProcess(shopId) {
+async function initiateSyncingProcess(shopId, orgId) {
   console.log("initiate syncing process...");
-  console.log({ shopId });
   const existingOrderSyncJob = await checkIfAnySyncIsAlreadyInProgress(shopId);
   console.log(existingOrderSyncJob);
   if (existingOrderSyncJob) {
@@ -104,10 +103,9 @@ async function initiateSyncingProcess(shopId) {
   const job = new OrderSyncJob({
     shopId: shopId,
     status: "processing",
+    orgId: orgId,
   });
   await job.save();
-
-  job.channel = "shopify";
 
   await orderSyncQueue.add("shopify", job, {
     removeOnComplete: true, // Automatically remove job data on completion
@@ -120,10 +118,10 @@ async function checkIfAnySyncIsAlreadyInProgress(shopId) {
   console.log("check order sync in progress method..".bold.green);
   const orderSyncJob = await OrderSyncJob.findOne({ shopId: shopId, status: "processing" })
     .then((data) => {
-      console.log(data);
       return data;
     })
     .catch((err) => {
+      console.log(err);
       throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error checking if any sync is already in progress");
     });
   return orderSyncJob;
@@ -132,6 +130,7 @@ async function checkIfAnySyncIsAlreadyInProgress(shopId) {
 async function fetchOrders(params) {
   let shopId = params.shopId;
   let jobId = params._id;
+  let orgId = params.orgId;
   // Retrieve shop details from the database
   const shopDetails = await ShopifyShop.findById(shopId);
   if (!shopDetails) {
@@ -176,8 +175,10 @@ async function fetchOrders(params) {
       // Convert and insert orders into the database
       const convertedOrders = orders.map((order) => {
         return {
-          shopId: shopDetails._id,
+          shop: shopDetails._id,
+          orgId: shopDetails.organizationId,
           name: order.name,
+          customer: order.customer,
           orderId: order.id,
           orderNumber: order.order_number,
           totalPrice: order.total_price,
@@ -191,7 +192,6 @@ async function fetchOrders(params) {
         };
       });
       await Order.insertMany(convertedOrders);
-
       // Handle pagination
       let headerLink = parseLinkHeader(response.headerLink);
       if (headerLink.next) {

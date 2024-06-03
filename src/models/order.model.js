@@ -33,13 +33,18 @@ const lineItemSchema = new mongoose.Schema(
 );
 
 const orderSchema = new mongoose.Schema({
-  shopId: {
+  shop: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Shop",
     required: true,
   },
+  orgId: { type: Number, required: true },
   name: {
     type: String,
+    required: false,
+  },
+  customer: {
+    type: Object,
     required: false,
   },
   orderNumber: {

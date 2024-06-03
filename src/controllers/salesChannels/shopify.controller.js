@@ -4,8 +4,9 @@ const ShopifyService = require("../../services/channel/shopify.service.js");
 async function syncOrders(req, res) {
   try {
     let shopId = req.params.shopId;
-    console.log("sync orders method controller...");
-    const data = await ShopifyService.initiateSyncingProcess(shopId);
+    let orgId = req.cookies.orgId;
+    const data = await ShopifyService.initiateSyncingProcess(shopId, orgId);
+    // const data = await ShopifyService.initiateSyncingProcess(shopId);
     console.log(data);
     res.json(data);
   } catch (error) {
