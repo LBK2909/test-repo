@@ -2,8 +2,9 @@ const httpStatus = require("http-status");
 const catchAsync = require("../utils/catchAsync");
 const { User, Organization, Courier, OrganizationCourier } = require("../models");
 const { Shop, ShopifyShop } = require("../models/shop.model");
-
 const CustomError = require("../utils/customError");
+const organizationService = require("../services/organization.service");
+
 exports.organizationList = catchAsync(async (req, res) => {
   const userId =
     req.query?.userId ||
@@ -100,43 +101,16 @@ exports.selectOrganization = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send({ message: "Organization selected successfully." });
 });
 exports.addNewOrganization = catchAsync(async (req, res) => {
-  const { organizationName } = req.body;
   const userId = req.cookies["userId"] || null;
-
-  // Check if the user exists
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new CustomError(httpStatus.BAD_REQUEST, "User not found");
-  }
-
-  // Check if the organization name is unique
-  const organizationExists = user.organizations.find((org) => org.name === organizationName);
-  if (organizationExists) {
-    throw new CustomError(httpStatus.BAD_REQUEST, "Organization name already exists");
-  }
-
-  const newOrganization = await Organization.create({
-    organizationName: req.body.organizationName,
-    configurationSetup: true,
-    userId: userId,
-  });
-
-  newOrganization.save();
-  // Create a new organization
-  const organization = {
-    organizationId: newOrganization._id,
-    name: organizationName,
-    roles: ["admin"],
-  };
-  user.organizations.push(organization);
-  await user.save();
-
-  const organizationList = user.organizations || [];
+  const organizationData = req.body;
+  const organizationList = await organizationService.createOrganization(userId, organizationData);
   res.status(httpStatus.CREATED).send({ organizationList });
 });
 
 exports.connectCourierToOrganization = catchAsync(async (req, res) => {
-  const { courierId, credentials } = req.body;
+  const { name, courierId, credentials, selectedShippingModes, isProductionEnvironment } = req.body;
+  console.log("courierId==", courierId);
+  console.log("credentials==", credentials);
   // return;
   try {
     let organizationId = parseInt(req.cookies["orgId"]) || null;
@@ -144,24 +118,31 @@ exports.connectCourierToOrganization = catchAsync(async (req, res) => {
       throw new CustomError(httpStatus.BAD_REQUEST, "Organization ID is required");
     }
 
-    const orgCourier = await connectCourier(organizationId, courierId, credentials);
+    const orgCourier = await connectCourier(
+      organizationId,
+      courierId,
+      credentials,
+      name,
+      selectedShippingModes,
+      isProductionEnvironment
+    );
     res.status(httpStatus.OK).send(orgCourier);
   } catch (error) {
     console.error(error);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ message: error.message });
   }
 });
-async function connectCourier(organizationId, courierId, credentials) {
+async function connectCourier(organizationId, courierId, credentials, name, selectedShippingModes, isProductionEnvironment) {
   try {
     // Find the courier to get the required credentials
     const courier = await Courier.findById(courierId);
     if (!courier) throw new Error("Courier not found");
 
     // Construct the credentials map
-    const credentialsMap = new Map();
+    const credentialsObj = {};
     courier.credentials.forEach((key) => {
       if (credentials.hasOwnProperty(key)) {
-        credentialsMap.set(key, credentials[key]);
+        credentialsObj[key] = credentials[key];
       } else {
         throw new Error(`Credential ${key} is required but not provided`);
       }
@@ -172,7 +153,10 @@ async function connectCourier(organizationId, courierId, credentials) {
       organizationId,
       courierId,
       isActive: true,
-      credentials: credentialsMap,
+      credentials: credentialsObj,
+      name,
+      selectedShippingModes,
+      isProductionEnvironment,
     });
 
     await orgCourier.save();

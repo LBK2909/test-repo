@@ -57,22 +57,5 @@ app.use(errorConverter);
 
 // handle error
 app.use(errorHandler);
-// app.use(
-//   session({
-//     secret: "keyboard cat",
-//     resave: false, // don't save session if unmodified
-//     saveUninitialized: false, // don't create session until something stored
-//   })
-// );
-// app.use(passport.authenticate("session"));
-// Start server
-// const PORT = process.env.PORT || 3000;
-// app.listen(PORT, () => {
-//   console.log(`Server is running on port ${PORT}`);
-// });
-setTimeout(() => {
-  // delhiveryController.createShipment();
-  // shippingController.shipmentBooking();
-  // shopifyController.syncOrders();
-}, 2000);
+
 module.exports = app;

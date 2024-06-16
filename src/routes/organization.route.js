@@ -30,6 +30,7 @@ router.post(
 router.get("/get-installed-shops/:organizationId", auth.verifyToken, organizationController.getInstalledShops);
 router.post("/setup/select-organization", organizationController.selectOrganization);
 router.post("/add-new-organization", organizationController.addNewOrganization);
+// router.put("/update-organization-courier/:id", organizationController.updateOrganizationCourier);
 // router.post("/select-organization", (req, res) => {
 //   const { organizationId } = req.body;
 //   // Set a secure, HttpOnly cookie with the organization ID

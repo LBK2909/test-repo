@@ -7,6 +7,9 @@ function getCounterModel() {
 function getOrderModel() {
   return require("../models/order.model.js");
 }
+function getCourierModel() {
+  return require("../models/courier/courier.model.js");
+}
 const getNextDocumentId = async (sequenceName) => {
   const CounterModel = getCounterModel();
   const counterDocument = await CounterModel.findOneAndUpdate(
@@ -30,10 +33,11 @@ async function updateJobStatus(jobId, statusField) {
   }
 }
 
-const updateOrderStatus = async (orderId, status) => {
+const updateOrderStatus = async (id, obj) => {
   try {
     const OrderModel = getOrderModel();
-    const result = await OrderModel.updateOne({ orderId: orderId }, { status: status });
+    const result = await OrderModel.findByIdAndUpdate({ _id: id }, { $set: obj }, { new: true });
+
     return result;
   } catch (error) {
     // Handle the error appropriately
@@ -41,6 +45,25 @@ const updateOrderStatus = async (orderId, status) => {
     throw error; // Re-throw the error to be handled by the caller
   }
 };
+async function getCourierEndpoint(courierName, environment) {
+  try {
+    const getCourierModel = getCounterModel();
+    const courier = await getCourierModel.findOne({ name: courierName });
+    if (!courier) {
+      throw new Error("Courier not found");
+    }
+
+    const endpoint = courier.endpoints[environment];
+    if (!endpoint) {
+      throw new Error(`Endpoint for ${environment} not found`);
+    }
+
+    return endpoint;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
 
 module.exports = {
   getNextDocumentId,

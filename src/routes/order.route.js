@@ -23,5 +23,6 @@ const conditionalVerifyAccess = (req, res, next) => {
 router.use(conditionalVerifyAccess);
 router.get("/sync-shopify-orders/:shopId", shopifyController.syncOrders);
 router.get("/get-orders", orderController.orders);
+router.put("/update-order", orderController.updateOrder);
 
 module.exports = router;

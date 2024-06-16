@@ -1,12 +1,12 @@
 const bcrypt = require("bcryptjs");
 let axios = require("axios");
 const CustomError = require("../../utils/customError");
+const { findOptimalBox } = require("../../utils/util.js");
 const httpStatus = require("http-status");
 let { ShopifyShop, Shop } = require("../../models/shop.model");
-const { Order, OrderSyncJob } = require("../../models");
+const { Order, OrderSyncJob, Box } = require("../../models");
 const shopify = require("../../integrations/salesChannels/shopify");
 const { orderSyncQueue } = require("../../workers/queues");
-
 async function authenticateShop(shop) {
   const existingShop = await Shop.findOne({ name: shop });
   console.log({ existingShop });
@@ -94,24 +94,31 @@ async function installShopifyApp(shop, code) {
  */
 
 async function initiateSyncingProcess(shopId, orgId) {
-  console.log("initiate syncing process...");
-  const existingOrderSyncJob = await checkIfAnySyncIsAlreadyInProgress(shopId);
-  console.log(existingOrderSyncJob);
-  if (existingOrderSyncJob) {
-    return existingOrderSyncJob._id;
-  }
-  const job = new OrderSyncJob({
-    shopId: shopId,
-    status: "processing",
-    orgId: orgId,
-  });
-  await job.save();
+  try {
+    console.log("initiate syncing process...");
+    const existingOrderSyncJob = await checkIfAnySyncIsAlreadyInProgress(shopId);
+    console.log(existingOrderSyncJob);
+    if (existingOrderSyncJob) {
+      return existingOrderSyncJob._id;
+    }
+    const job = new OrderSyncJob({
+      shopId: shopId,
+      status: "processing",
+      orgId: orgId,
+    });
+    await job.save();
 
-  await orderSyncQueue.add("shopify", job, {
-    removeOnComplete: true, // Automatically remove job data on completion
-    removeOnFail: false, // Automatically remove job data on failure
-  });
-  return job._id;
+    await orderSyncQueue.add("shopify", job, {
+      removeOnComplete: true, // Automatically remove job data on completion
+      removeOnFail: false, // Automatically remove job data on failure
+    });
+    return job._id;
+  } catch (err) {
+    let jobId = params._id;
+    console.log("error in initiate synching process..");
+    await OrderSyncJob.updateOne({ _id: jobId }, { status: "failed" });
+    throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error initiating syncing process");
+  }
 }
 
 async function checkIfAnySyncIsAlreadyInProgress(shopId) {
@@ -128,80 +135,93 @@ async function checkIfAnySyncIsAlreadyInProgress(shopId) {
 }
 
 async function fetchOrders(params) {
-  let shopId = params.shopId;
-  let jobId = params._id;
-  let orgId = params.orgId;
-  // Retrieve shop details from the database
-  const shopDetails = await ShopifyShop.findById(shopId);
-  if (!shopDetails) {
-    console.log("shop not found...");
-    throw new CustomError(httpStatus.NOT_FOUND, "Shop not found");
-  }
-
-  //get the latest orderId from the orders collection
-  const latestOrder = await Order.findOne({ shopId: shopDetails._id }).sort({ orderId: -1 });
-  const latestOrderId = latestOrder ? latestOrder.orderId : null;
-  // Set up Shopify API client with the shop's details
-  const shopifyClient = new shopify(shopDetails.accessToken, shopDetails.storeUrl);
-  // Fetch orders from Shopify and process them
-  let response = await fetchOrdersAPI({ latestOrderId });
-  console.log("all orders fetched sucessfully...");
-  // Update the job status to "completed"
-  await OrderSyncJob.updateOne({ _id: jobId }, { status: "completed" });
-  console.log("jobs ");
-  return response;
-
-  /**
-   * Recursively fetches orders from Shopify and updates the local database.
-   * Handles pagination by recursively calling itself if more pages are available.
-   *
-   * @param {object} params - Parameters for fetching orders including the latest order ID and pagination link.
-   * @returns {Promise<string>} - A promise that resolves after all pages have been fetched and processed.
-   * @throws {CustomError} - Throws an error if fetching or processing fails.
-   */
-
-  async function fetchOrdersAPI(params) {
-    try {
-      let { latestOrderId, link } = params;
-      let payloadObj = {
-        latestOrderId,
-        link,
-      };
-
-      // Fetch orders using the Shopify client
-      const response = await shopifyClient.fetchOrders(payloadObj);
-      const orders = response.orders || [];
-
-      // Convert and insert orders into the database
-      const convertedOrders = orders.map((order) => {
-        return {
-          shop: shopDetails._id,
-          orgId: shopDetails.organizationId,
-          name: order.name,
-          customer: order.customer,
-          orderId: order.id,
-          orderNumber: order.order_number,
-          totalPrice: order.total_price,
-          lineItems: order.line_items,
-          shippingAddress: order.shipping_address,
-          billingAddress: order.billing_address,
-          createdAt: order.created_at,
-          updatedAt: order.updated_at,
-          // paymentGateway: order.payment_gateway_names,
-          financialStatus: order.financial_status,
-        };
-      });
-      await Order.insertMany(convertedOrders);
-      // Handle pagination
-      let headerLink = parseLinkHeader(response.headerLink);
-      if (headerLink.next) {
-        await fetchOrdersAPI({ link: headerLink });
-      }
-      return "Orders updated successfully";
-    } catch (error) {
-      // console.log("error code in http status httpStatus.INTERNAL_SERVER_ERROR===", httpStatus.INTERNAL_SERVER_ERROR);
-      throw new CustomError(error.statusCode || 500, error.message || "Error updating orders");
+  try {
+    let shopId = params.shopId;
+    let jobId = params._id;
+    let orgId = params.orgId;
+    // Retrieve shop details from the database
+    const shopDetails = await ShopifyShop.findById(shopId);
+    if (!shopDetails) {
+      console.log("shop not found...");
+      throw new CustomError(httpStatus.NOT_FOUND, "Shop not found");
     }
+
+    //get the latest orderId from the orders collection
+    const latestOrder = await Order.findOne({ shopId: shopDetails._id }).sort({ orderId: -1 });
+    const latestOrderId = latestOrder ? latestOrder.orderId : null;
+    // Set up Shopify API client with the shop's details
+    const shopifyClient = new shopify(shopDetails.accessToken, shopDetails.storeUrl);
+    let boxes = await Box.find({ orgId: orgId });
+
+    // Fetch orders from Shopify and process them
+    let response = await fetchOrdersAPI({ latestOrderId });
+    // Update the job status to "completed"
+    await OrderSyncJob.updateOne({ _id: jobId }, { status: "completed" });
+    return response;
+
+    /**
+     * Recursively fetches orders from Shopify and updates the local database.
+     * Handles pagination by recursively calling itself if more pages are available.
+     *
+     * @param {object} params - Parameters for fetching orders including the latest order ID and pagination link.
+     * @returns {Promise<string>} - A promise that resolves after all pages have been fetched and processed.
+     * @throws {CustomError} - Throws an error if fetching or processing fails.
+     */
+
+    async function fetchOrdersAPI(params) {
+      try {
+        let { latestOrderId, link } = params;
+        let payloadObj = {
+          latestOrderId,
+          link,
+        };
+
+        // Fetch orders using the Shopify client
+        const response = await shopifyClient.fetchOrders(payloadObj);
+        const orders = response.orders || [];
+
+        // Convert and insert orders into the database
+        const convertedOrders = orders.map((order) => {
+          return {
+            shop: shopDetails._id,
+            orgId: shopDetails.organizationId,
+            name: order.name,
+            customer: order.customer,
+            orderId: order.id,
+            orderNumber: order.order_number,
+            totalPrice: order.total_price,
+            totalWeightGrams: getTotalWeight(order.line_items) || 0,
+            lineItems: order.line_items,
+            shippingAddress: order.shipping_address,
+            billingAddress: order.billing_address,
+            createdAt: order.created_at,
+            updatedAt: order.updated_at,
+            courierDetails: {
+              packageDimensions: findOptimalBox(getTotalWeight(order.line_items), boxes),
+              packageWeight: getTotalWeight(order.line_items),
+              paymentMode: "prepaid",
+            },
+            // paymentGateway: order.payment_gateway_names,
+            financialStatus: order.financial_status,
+          };
+        });
+        await Order.insertMany(convertedOrders);
+        // Handle pagination
+        let headerLink = parseLinkHeader(response.headerLink);
+        if (headerLink.next) {
+          await fetchOrdersAPI({ link: headerLink });
+        }
+        return "Orders updated successfully";
+      } catch (error) {
+        console.log("error in fetch orders api...");
+        // console.log("error code in http status httpStatus.INTERNAL_SERVER_ERROR===", httpStatus.INTERNAL_SERVER_ERROR);
+        throw new CustomError(error.statusCode || 500, error.message || "Error updating orders");
+      }
+    }
+  } catch (err) {
+    let jobId = params._id;
+    await OrderSyncJob.updateOne({ _id: jobId }, { status: "failed" });
+    throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, err);
   }
 }
 
@@ -220,6 +240,10 @@ function parseLinkHeader(link) {
     }
   });
   return parsedLinks;
+}
+function getTotalWeight(lineItems) {
+  const totalWeight = lineItems.reduce((sum, item) => sum + item.grams, 0);
+  return totalWeight || 0;
 }
 //   this.link = parsedLinks;
 //   this.updatePaginateButton = ~this.updatePaginateButton;

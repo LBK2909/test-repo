@@ -18,3 +18,20 @@ exports.orders = catchAsync(async (req, res) => {
 
   res.status(httpStatus.OK).send(orders);
 });
+
+exports.updateOrder = catchAsync(async (req, res) => {
+  let orgId = req.cookies.orgId;
+  orgId = parseInt(orgId);
+  // let orderId = req.params.orderId;
+  let body = req.body;
+  let orderId = body.id;
+  let courierPartner = body.courierPartner;
+  let updated = await Order.findOneAndUpdate({ _id: orderId }, { $set: { courierPartner: courierPartner } })
+    .then((order) => {
+      return order;
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+  console.log({ updated });
+});
