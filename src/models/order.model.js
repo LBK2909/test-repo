@@ -1,36 +1,45 @@
 const mongoose = require("mongoose");
 
-const lineItemSchema = new mongoose.Schema(
-  {
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    price: {
-      type: Number,
-      required: true,
-    },
-    grams: {
-      type: Number,
-      required: false,
-      default: 0,
-    },
-    sku: {
-      type: String,
-      required: false,
-    },
-    title: {
-      type: String,
-      required: true,
-    },
-    variantId: {
-      type: String,
-      required: false,
-    },
+const lineItemSchema = new mongoose.Schema({
+  _id: {
+    type: mongoose.Schema.Types.ObjectId,
+    auto: true,
   },
-  { _id: false }
-);
+  productId: {
+    type: Number,
+    required: true,
+  },
+  itemId: {
+    type: Number,
+    required: false,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  grams: {
+    type: Number,
+    required: false,
+    default: 0,
+  },
+  sku: {
+    type: String,
+    required: false,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  variantId: {
+    type: Number,
+    required: false,
+  },
+});
 
 const customsInfoSchema = new mongoose.Schema(
   {
@@ -115,6 +124,10 @@ const courierDetailsSchema = new mongoose.Schema(
       height: { type: Number, required: false },
       emptyWeight: { type: Number, required: false },
       unit: { type: String, required: false, enum: ["cm", "in"], default: "cm" },
+      boxId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+      },
     },
     packageWeight: {
       value: { type: Number, required: false },
@@ -206,6 +219,11 @@ const orderSchema = new mongoose.Schema({
   lineItems: [lineItemSchema],
   shippingAddress: {
     type: Object,
+    required: false,
+    default: null,
+  },
+  notes: {
+    type: String,
     required: false,
     default: null,
   },

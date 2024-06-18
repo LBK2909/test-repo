@@ -191,7 +191,7 @@ async function fetchOrders(params) {
             orderNumber: order.order_number,
             totalPrice: order.total_price,
             totalWeightGrams: getTotalWeight(order.line_items) || 0,
-            lineItems: order.line_items,
+            lineItems: getLineItems(order.line_items),
             shippingAddress: order.shipping_address,
             billingAddress: order.billing_address,
             createdAt: order.created_at,
@@ -203,6 +203,7 @@ async function fetchOrders(params) {
             },
             // paymentGateway: order.payment_gateway_names,
             financialStatus: order.financial_status,
+            notes: order.note,
           };
         });
         await Order.insertMany(convertedOrders);
@@ -244,6 +245,18 @@ function parseLinkHeader(link) {
 function getTotalWeight(lineItems) {
   const totalWeight = lineItems.reduce((sum, item) => sum + item.grams, 0);
   return totalWeight || 0;
+}
+function getLineItems(lineItems) {
+  return lineItems.map((item) => {
+    return {
+      name: item.name,
+      quantity: item.quantity,
+      grams: item.grams,
+      price: item.price,
+      productId: item.product_id,
+      variantId: item.variant_id,
+    };
+  });
 }
 //   this.link = parsedLinks;
 //   this.updatePaginateButton = ~this.updatePaginateButton;
