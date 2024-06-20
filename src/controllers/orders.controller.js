@@ -4,21 +4,30 @@ const { User, Order } = require("../models");
 const { Shop, ShopifyShop } = require("../models/shop.model");
 
 const CustomError = require("../utils/customError");
+
 exports.orders = catchAsync(async (req, res) => {
-  let orgId = req.cookies.orgId;
-  orgId = parseInt(orgId);
-  const orders = await Order.find({ orgId: orgId })
-    .populate("shop", "name")
-    .then((orders) => {
-      return orders || [];
-    })
+  let orgId = parseInt(req.cookies.orgId);
+  let { page = 1, itemsPerPage = 10, status } = req.query;
+  page = parseInt(page);
+  itemsPerPage = parseInt(itemsPerPage);
+  // Calculate the number of documents to skip
+  const skip = (page - 1) * itemsPerPage;
+  const query = { orgId: orgId }; // Add status key field to the query
+
+  if (status) query.status = status;
+  const orders = await Order.find(query)
+    .sort({ _id: 1 }) // Ensure sorting by _id
+    .skip(skip)
+    .limit(itemsPerPage)
+    .populate("shop", "name channel")
     .catch((err) => {
       console.log(err);
+      return [];
     });
+  const totalOrders = await Order.countDocuments(query);
 
-  res.status(httpStatus.OK).send(orders);
+  res.status(httpStatus.OK).send({ orders, totalOrders });
 });
-
 exports.updateOrder = catchAsync(async (req, res) => {
   try {
     let id = req.params.id;

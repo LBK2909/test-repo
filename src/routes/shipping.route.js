@@ -11,4 +11,5 @@ router.post("/shipment-booking", shippingController.shipmentBooking);
 router.get("/bulk-shipment-status/:jobId", shippingController.bulkShipmentStatus);
 router.get("/get-couriers-by-organization", shippingController.getCouriersByOrganization);
 router.put("/bulk-update-orders", shippingController.bulkUpdateOrders);
+router.post("/fulfillment", shippingController.fulfillOrdersInShopify);
 module.exports = router;

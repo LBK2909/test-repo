@@ -5,7 +5,7 @@ const { findOptimalBox } = require("../../utils/util.js");
 const httpStatus = require("http-status");
 let { ShopifyShop, Shop } = require("../../models/shop.model");
 const { Order, OrderSyncJob, Box } = require("../../models");
-const shopify = require("../../integrations/salesChannels/shopify");
+const Shopify = require("../../integrations/salesChannels/shopify");
 const { orderSyncQueue } = require("../../workers/queues");
 async function authenticateShop(shop) {
   const existingShop = await Shop.findOne({ name: shop });
@@ -32,7 +32,9 @@ async function authenticateShop(shop) {
   }
   const clientId = process.env.SHOPIFY_CLIENT_ID;
   const redirectUri = `${process.env.SERVER_BASE_URL}/auth/shopify/callback`;
-  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=read_products,read_orders&state=${salt}&redirect_uri=${redirectUri}`;
+  const scope =
+    "read_products,read_orders,read_fulfillments,write_fulfillments,read_assigned_fulfillment_orders,write_assigned_fulfillment_orders,read_merchant_managed_fulfillment_orders,write_merchant_managed_fulfillment_orders";
+  const installUrl = `https://${shop}/admin/oauth/authorize?client_id=${clientId}&scope=${scope}&state=${salt}&redirect_uri=${redirectUri}`;
 
   return { url: installUrl, newShop: true };
 }
@@ -150,7 +152,7 @@ async function fetchOrders(params) {
     const latestOrder = await Order.findOne({ shopId: shopDetails._id }).sort({ orderId: -1 });
     const latestOrderId = latestOrder ? latestOrder.orderId : null;
     // Set up Shopify API client with the shop's details
-    const shopifyClient = new shopify(shopDetails.accessToken, shopDetails.storeUrl);
+    const shopifyClient = new Shopify(shopDetails.accessToken, shopDetails.storeUrl);
     let boxes = await Box.find({ orgId: orgId });
 
     // Fetch orders from Shopify and process them
@@ -258,12 +260,28 @@ function getLineItems(lineItems) {
     };
   });
 }
-//   this.link = parsedLinks;
-//   this.updatePaginateButton = ~this.updatePaginateButton;
+
+async function fulfillOrdersInShopify(ordersList) {
+  try {
+    let shopify = new Shopify();
+    let orders = await Order.find({ _id: { $in: ordersList }, status: { $eq: "booked" } })
+      .populate("shop")
+      .select("courierDetails orderId");
+    // console.log("orders", orders);
+    const fulfillmentDetails = await shopify.fetchFulfillmentIdFromShopify(orders);
+    const fulfilledOrders = await shopify.orderFulfillmentShopifyAPI(fulfillmentDetails);
+    return fulfilledOrders;
+  } catch (error) {
+    console.error("Error while fulfilling orders in Shopify:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   authenticateShop,
   installShopifyApp,
   fetchOrders,
   parseLinkHeader,
   initiateSyncingProcess,
+  fulfillOrdersInShopify,
 };

@@ -179,6 +179,20 @@ const shippingServiceSchema = new mongoose.Schema({
     required: true,
   },
 });
+const fulfillmentSchema = new mongoose.Schema({
+  id: {
+    type: Number,
+    required: true,
+  },
+  status: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 const orderSchema = new mongoose.Schema({
   shop: {
     type: mongoose.Schema.Types.ObjectId,
@@ -238,11 +252,10 @@ const orderSchema = new mongoose.Schema({
     required: false,
     default: null,
   },
-  // courierPartner: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "OrganizationCourier",
-  //   required: false,
-  // },
+  fulfillment: {
+    type: fulfillmentSchema,
+    required: true,
+  },
   shippingService: {
     type: shippingServiceSchema,
     required: false,

@@ -1,11 +1,10 @@
 // const SocketManager = require("../sockets/socketManager").getInstance();
 const shippingQueue = require("../workers/queues/shippingQueue");
-const { shippingService } = require("../services");
+const { shippingService, shopifyService } = require("../services");
 const { Job, Order, Courier, Organization, OrganizationCourier } = require("../models");
 const CustomError = require("../utils/customError");
 const httpStatus = require("http-status");
 const { updateOrderStatus } = require("../utils/db.js");
-
 const courierPartners = {
   delhivery: require("../services/courierPartners"),
 };
@@ -159,6 +158,18 @@ exports.bulkUpdateOrders = catchAsync(async (req, res) => {
     res.status(200).send(updated);
   } catch (err) {
     console.log("error in bulkUpdateOrders controller...", err);
+    res.status(503).send(err);
+  }
+});
+
+exports.fulfillOrdersInShopify = catchAsync(async (req, res) => {
+  try {
+    let orderIds = req.body.orders || [];
+    let orders = await shopifyService.fulfillOrdersInShopify(orderIds);
+    let updateOrders = await shippingService.updateOrdersWithFulfillment(orders);
+    res.send(updateOrders);
+  } catch (err) {
+    console.log(err);
     res.status(503).send(err);
   }
 });
