@@ -11,8 +11,6 @@ exports.verifyToken = (req, res, next) => {
   }
   let token = req.headers["access-token"];
   let cookieToken = req.cookies["accessToken"];
-  console.log("cookieToken...");
-  console.log({ cookieToken });
   if (!cookieToken) {
     return res.status(403).send({ message: "No token provided!" });
   }

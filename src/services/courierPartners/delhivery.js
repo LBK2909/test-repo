@@ -14,6 +14,8 @@ const mongoose = require("mongoose");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const { AsyncResource } = require("async_hooks");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const colors = require("colors");
 
 async function createShipment(order, job = null) {
   try {
@@ -26,15 +28,16 @@ async function createShipment(order, job = null) {
     let credentials = order.shippingService?._id?.credentials || {};
     const delhiveryCourier = new Delhivery(credentials, rootUrl, order);
     let shipmentResponse = await delhiveryCourier.initiateBooking();
-    await updateShipmentStatus(shipmentResponse);
-    await createShippingLabel(order);
+    let shippingLabelResponse = await createShippingLabel(order);
+    let uploadFileResponse = await uploadToS3Bucket(shippingLabelResponse);
+    await updateShipmentStatus(shipmentResponse, uploadFileResponse);
     if (job) {
       await updateJobStatus(job, "completedOrders");
     }
   } catch (err) {
     console.log("error in createShipment service...", err);
     updateOrderStatus(order._id, { status: "pending" });
-    updateOrderStatus(order._id, { "courierDetails.bookingStatus": "failed" });
+    updateOrderStatus(order._id, { "courierDetails.bookingStatus": "failed", "courierDetails.bookingInfo": err.message });
     if (job) {
       updateJobStatus(job, "failedOrders");
     } else {
@@ -43,24 +46,26 @@ async function createShipment(order, job = null) {
   }
 }
 
-async function updateShipmentStatus(response) {
+async function updateShipmentStatus(response, uploadFileResponse) {
   const { order, shipmentResponse } = response || {};
+  let awbURL = "";
   let bookingStatus = "";
-
   let errMessage = "";
+  if (uploadFileResponse.isCreated && uploadFileResponse.url) {
+    awbURL = uploadFileResponse.url;
+  }
   // Validate request body
   if (!order?._id || !shipmentResponse) {
     throw new CustomError(400, "Missing orderId or shipmentResponse");
   }
 
   // Extract necessary information from the shipment response
-  const packageInfo = shipmentResponse?.packages[0] || null;
+  const packageInfo = shipmentResponse?.packages[0] ?? null;
   if (!shipmentResponse.success || !packageInfo) {
     bookingStatus = "failed";
   } else {
     bookingStatus = "booked";
   }
-
   const updatedDetails = {
     "courierDetails.name": order.courierPartner?.courierId?.name,
     "courierDetails.trackingNumber": packageInfo?.waybill,
@@ -74,6 +79,7 @@ async function updateShipmentStatus(response) {
     "courierDetails.shippedAt": null,
     "courierDetails.deliveredAt": null,
     "courierDetails.bookedAt": new Date(),
+    "courierDetails.shippingLabel": awbURL || "",
     status: bookingStatus === "booked" ? "booked" : "pending",
     updatedAt: new Date(),
   };
@@ -99,29 +105,6 @@ async function updateShipmentStatus(response) {
     throw new CustomError(statusCode, message);
   }
   return response;
-}
-async function wayBillGeneration() {
-  let config = {
-    method: "get",
-    maxBodyLength: Infinity,
-    url: "https://staging-express.delhivery.com/waybill/api/fetch/json/",
-    headers: {
-      Authorization: "Token ad0909fbe983d4c0e26bfa49051a9dbfc7d8bb81",
-      Cookie: "sessionid=br7sthmpnh5lcoow4gd0sebdkbtxuz4q",
-    },
-  };
-
-  let wayBillResponse = await axios
-    .request(config)
-    .then((response) => {
-      const awbNumber = response.data || "";
-      return awbNumber || "";
-    })
-    .catch((error) => {
-      console.log("error", error);
-      return null;
-    });
-  return wayBillResponse;
 }
 
 async function generateBarcode(awbNumber, retryCount = 0) {
@@ -187,21 +170,6 @@ async function createQRCode(orderId, width = 55, height = 40) {
     console.error(err);
   }
 }
-const createEmptyPDF = async (filePath) => {
-  const pdfContent = Buffer.from("%PDF-1.4\n");
-  console.log("create empty pdf method called");
-
-  return new Promise((resolve, reject) => {
-    fs.writeFile(filePath, pdfContent, (err) => {
-      if (err) {
-        console.error("Error creating PDF file:", err);
-        reject(err);
-      } else {
-        resolve(true);
-      }
-    });
-  });
-};
 
 // Generate the shipping label content
 const generateShippingLabelContent = async (data, page) => {
@@ -232,7 +200,6 @@ const generateShippingLabelContent = async (data, page) => {
       </div>
     </div>
   `;
-    console.log("order details", data.orderDetails);
     const orderDetails = `
     <div class=" flex-row-center border-line" >
     <div class="order-details">
@@ -336,8 +303,66 @@ const generateShippingLabelContent = async (data, page) => {
     throw new CustomError(500, err);
   }
 };
+async function uploadToS3Bucket(file) {
+  try {
+    if (file.isCreated) {
+      let filePath = file.url;
+      // console.log("upload to s3 bucket".blue.bold);
+      const CREDENTIALS = {
+        accessKeyId: process.env.AWS_ACCESS_KEY,
+        secretAccessKey: process.env.AWS_SECERT_KEY,
+      };
+      const s3Client = new S3Client({
+        region: process.env.AWS_REGION,
+        credentials: CREDENTIALS,
+      });
 
-const styles = `
+      const fileContent = await fs.promises.readFile(filePath);
+      const uploadParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: filePath,
+        Body: fileContent,
+        ContentType: "application/pdf",
+      };
+      const uploadCommand = new PutObjectCommand(uploadParams);
+      let s3clientRes = await s3Client
+        .send(uploadCommand)
+        .then((res) => {
+          // console.log(res);
+          return true;
+        })
+        .catch((err) => {
+          console.log(err);
+          return false;
+        });
+      await deleteLocalFile(filePath);
+
+      if (s3clientRes) {
+        return {
+          isCreated: true,
+          url: `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${filePath}`,
+        };
+      } else {
+        throw new CustomError(500, "Failed to upload file to S3 bucket");
+      }
+    } else {
+      throw new CustomError(500, "Failed to upload file to S3 bucket");
+    }
+  } catch (err) {
+    console.log(err);
+    throw new CustomError(500, "Failed to upload file to S3 bucket");
+  }
+}
+async function deleteLocalFile(filePath) {
+  try {
+    fs.unlinkSync(filePath);
+    // console.log(`Local file deleted successfully: ${filePath}`);
+  } catch (error) {
+    throw new Error("An error occurred while deleting local file");
+  }
+}
+const createShippingLabel = async (order) => {
+  const styles = `
 <style>
   @page {
     size: A6;
@@ -428,14 +453,15 @@ const styles = `
   }
 </style>
 `;
-
-const createShippingLabel = async (order) => {
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-  const shippingData = await createStructuredObj(order);
-  const generatedHtml = await generateShippingLabelContent(shippingData, page);
-
-  let pageHTML = `
+  try {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    const shippingData = await createStructuredObj(order);
+    const generatedHtml = await generateShippingLabelContent(shippingData, page);
+    let orderNumber = order.orderId || "";
+    let timestamp = new Date().getTime();
+    var shippingLabelFilePath = `awbLabel_${orderNumber}_${timestamp}.pdf`;
+    let pageHTML = `
     <html>
       <head>
         ${styles}
@@ -445,16 +471,43 @@ const createShippingLabel = async (order) => {
       </body>
     </html>
   `;
+    let emptyPDF = await createEmptyPDF(shippingLabelFilePath)
+      .then((res) => {
+        return res;
+      })
+      .catch((error) => {
+        console.error("PDF creation failed:", error);
+        return false;
+      });
+    if (!emptyPDF) {
+      return {};
+    }
+    await page.setContent(pageHTML, { waitUntil: "networkidle0" });
 
-  await page.setContent(pageHTML, { waitUntil: "networkidle0" });
+    let isPdfGenerated = await page
+      .pdf({
+        path: shippingLabelFilePath,
+        format: "A6",
+      })
+      .then((pdfBuffer) => {
+        // console.log("PDF Buffer:-", pdfBuffer);
+        return true;
+      })
+      .catch((error) => {
+        console.log("error in generating pdf", error);
+        return false;
+      });
 
-  await page.pdf({
-    path: "shipping-label.pdf",
-    format: "A6",
-  });
-
-  await browser.close();
-  console.log("PDF generated successfully!");
+    await browser.close();
+    if (!isPdfGenerated) throw new CustomError(500, "Failed to generate shipping label");
+    return {
+      isCreated: isPdfGenerated,
+      url: shippingLabelFilePath,
+    };
+  } catch (err) {
+    console.log(err);
+    throw new CustomError(500, "Failed to generate shipping label");
+  }
 };
 function getRootURL(endpoints, isProductionEnvironment) {
   let rootUrl = "";
@@ -496,7 +549,6 @@ const createStructuredObj = async (orderObj) => {
     trackingNumber: orderObj?.courierDetails?.trackingNumber ?? "Unknown Tracking Number",
     routingCode: orderObj?.courierDetails?.routingCode ?? "NA",
   };
-  console.log({ orderDetails });
   let billingAddress = organization.billingAddress || {};
   let returnTo = {};
   if (billingAddress && Object.keys(billingAddress).length === 0) {
@@ -522,7 +574,7 @@ const createStructuredObj = async (orderObj) => {
   const products =
     orderObj?.lineItems?.map((item, i) => ({
       sku: item?.sku ?? i,
-      name: item?.title ?? "Unknown Product",
+      name: item?.name ?? "Unknown Product",
       qty: item?.quantity ?? 0,
       unitPrice: item?.price ?? 0,
     })) ?? [];
@@ -538,5 +590,17 @@ const createStructuredObj = async (orderObj) => {
     products,
   };
 };
-
+async function createEmptyPDF(filePath) {
+  const pdfContent = Buffer.from("%PDF-1.4\n");
+  return new Promise((resolve, reject) => {
+    fs.writeFile(filePath, pdfContent, (err) => {
+      if (err) {
+        console.error("Error creating PDF file:", err);
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
 module.exports = { createShipment };

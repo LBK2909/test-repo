@@ -1,6 +1,7 @@
 let axios = require("axios");
 const CustomError = require("../../utils/customError");
 const moment = require("moment");
+const { error } = require("winston");
 
 class DelhiveryCourier {
   constructor(credentials, URL, order) {
@@ -18,11 +19,9 @@ class DelhiveryCourier {
       // Logic to initiate booking using this.accessToken and this.URL
       this.wayBillNumber = await this.generateWaybill();
       let shipmentResponse = await this.createShipment();
-      // console.log("shipmentResponse", shipmentResponse);
       return shipmentResponse;
     } catch (err) {
-      // console.log("error in initiatebooking....", err);
-      throw new CustomError(500, err);
+      throw new CustomError(500, err.message || err);
     }
   }
 
@@ -44,7 +43,6 @@ class DelhiveryCourier {
           return awbNumber || "";
         })
         .catch((error) => {
-          console.log("error in promise/reject block");
           throw new CustomError(500, error);
         });
       return wayBillResponse;
@@ -131,18 +129,22 @@ class DelhiveryCourier {
       let response = await axios
         .request(config)
         .then(async (response) => {
-          // console.log(response);
+          const packageInfo = response.data?.packages[0] || null;
+          if (!response.data?.success || !packageInfo) {
+            return {
+              isFailed: true,
+              errorMessage: packageInfo?.remarks || response.data.rmk,
+              ...response.data,
+            };
+          }
           return response.data;
         })
         .catch((error) => {
-          // console.log("error", error);
-          // console.log("Errror Catch Block executed".red.bold.underline);
-          throw new CustomError(500, error);
-          // return {
-          //   orderId: this.order.orderId,
-          //   isBooked: false,
-          // };
+          throw new CustomError(500, error.message || error);
         });
+      if (response.isFailed) {
+        throw new CustomError(500, response.errorMessage || "Failed to create shipment");
+      }
       return { order: this.order, shipmentResponse: response };
     } catch (err) {
       console.log(err);

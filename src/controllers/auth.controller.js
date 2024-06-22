@@ -106,8 +106,6 @@ exports.googleAuthCallback = async (req, res) => {
   if (!req.user) {
     console.log("user not found...".red.bold.underline);
     res.status(httpStatus.NOT_FOUND).send();
-
-    // return res.redirect("http://localhost:5173/login?token=invalid");
   }
   const token = await tokenService.generateAuthTokens(req.user);
 
@@ -115,7 +113,7 @@ exports.googleAuthCallback = async (req, res) => {
   // Redirect to the frontend with the token (as a query param, in a cookie, etc.)
   // res.redirect(`/your-frontend-route?token=${token}`);
   // let token = "random-token-123456789";
-  res.redirect(`${process.env.CLIENT_SERVER_URL}/?token=${token}?user=${req.user}`);
+  res.redirect(`${process.env.CLIENT_BASE_URL}/?token=${token}?user=${req.user}`);
 };
 
 exports.logout = catchAsync(async (req, res) => {

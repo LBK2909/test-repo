@@ -69,6 +69,10 @@ const courierDetailsSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    shippingLabel: {
+      type: String,
+      required: false,
+    },
     trackingNumber: {
       type: String,
       required: false,

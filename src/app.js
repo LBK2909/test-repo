@@ -25,7 +25,7 @@ connectDB();
 app.use(
   cors({
     origin: function (origin, callback) {
-      const allowedOrigins = ["https://localhost:5173"];
+      const allowedOrigins = [process.env.CLIENT_BASE_URL];
       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
