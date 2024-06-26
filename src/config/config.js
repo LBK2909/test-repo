@@ -10,7 +10,6 @@ module.exports = {
     url: process.env.MONGODB_URL,
     testUrl: process.env.MONGODB_TEST_URL,
     options: {
-      useCreateIndex: true,
       useNewUrlParser: true,
       useUnifiedTopology: true,
     },

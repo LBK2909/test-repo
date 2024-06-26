@@ -25,8 +25,8 @@ exports.getCourierByOrganization = catchAsync(async (req, res) => {
 });
 exports.addCourier = catchAsync(async (req, res) => {
   // Logic to add a new courier
-  const { name, description, credentials, imageUrl } = req.body;
-  const courier = new Courier({ name, description, credentials, imageUrl });
+  const { name, description, credentials, imageUrl, shippingModes, endpoints } = req.body;
+  const courier = new Courier({ name, description, credentials, imageUrl, shippingModes, endpoints });
   await courier.save();
   res.status(httpStatus.CREATED).json({ message: "Courier added successfully", courier });
   res.send("add couriers");

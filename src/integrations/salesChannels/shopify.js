@@ -1,6 +1,6 @@
 const axios = require("axios");
 //import the custom error
-const CustomError = require("../../utils/CustomError");
+const CustomError = require("../../utils/customError");
 const httpStatus = require("http-status");
 class Shopify {
   constructor(accessToken, storeUrl) {
@@ -19,7 +19,7 @@ class Shopify {
         if (latestOrderId) {
           API_URL = `https://${this.storeUrl}/admin/api/2024-04/orders.json?since_id=${latestOrderId}&fulfillment_status=unfulfilled&limit=250&fields=id,email,customer,order_number,line_items,refunds,shipping_address,shipping_lines,name,note,created_at,tags,total_weight,total_price,total_price_set,total_line_items_price,current_subtotal_price,payment_gateway_names`;
         } else {
-          API_URL = `https://${this.storeUrl}/admin/api/2024-04/orders.json?fulfillment_status=unfulfilled&limit=250&fields=id,email,customer,order_number,line_items,refunds,shipping_address,shipping_lines,name,note,created_at,tags,total_weight,total_price,total_price_set,total_line_items_price,current_subtotal_price,payment_gateway_names`;
+          API_URL = `https://${this.storeUrl}/admin/api/2024-04/orders.json?fulfillment_status=unfulfilled&limit=250&fields=id,email,customer,order_number,line_items,refunds,shipping_address,shipping_lines,name,note,created_at,tags,total_weight,total_price,total_price_set,total_line_items_price,current_subtotal_price,payment_gateway_names&order=created_at asc`;
         }
       }
       //   let pageInfo = req.params.pageInfo || "";
@@ -38,6 +38,7 @@ class Shopify {
           return payloadObj;
         })
         .catch(function (error) {
+          console.log(error.response.data);
           throw new CustomError(500, "Failed to Fetch Orders from Shopify API");
         });
       return apiResponse;

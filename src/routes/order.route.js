@@ -22,6 +22,7 @@ const conditionalVerifyAccess = (req, res, next) => {
 // Apply this conditional middleware globally if all routes go through one entry point
 router.use(conditionalVerifyAccess);
 router.get("/sync-shopify-orders/:shopId", shopifyController.syncOrders);
+router.get("/get-order-sync-status/:jobId", shopifyController.getOrderSyncStatus);
 router.get("/get-orders", orderController.orders);
 router.put("/update-order/:id", orderController.updateOrder);
 router.put("/update-order-line-items/:id", orderController.updateOrderLineItems);

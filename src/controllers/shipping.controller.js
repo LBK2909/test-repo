@@ -118,8 +118,7 @@ exports.bulkShipmentStatus = catchAsync(async (req, res) => {
     }
     if (job && job.status === "completed") {
       let orders = job.orders || [];
-      const orderDetails = await Order.find({ orderId: { $in: orders } });
-      res.status(200).send(orderDetails);
+      res.status(200).send(job);
     } else {
       res.status(202).send("Job status is still processing");
     }

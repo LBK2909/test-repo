@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const { getNextDocumentId } = require("../utils/db.js");
 const validator = require("validator");
+const { union } = require("lodash");
 
 const addressSchema = new Schema(
   {
@@ -17,8 +18,8 @@ const addressSchema = new Schema(
 const organizationSchema = new Schema(
   {
     _id: Number,
-    organizationName: { type: String, required: true },
-    displayName: { type: String, required: true },
+    organizationName: { type: String, required: true, unique: true },
+    displayName: { type: String, required: false },
     phoneNumber: { type: Number, required: true },
     userId: { type: Number, default: null },
     configurationSetup: { type: Boolean, default: false },

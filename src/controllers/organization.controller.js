@@ -30,6 +30,7 @@ exports.getInstalledShops = catchAsync(async (req, res) => {
 
   // query the ShopifyShop collection using the organizationId
   const shopList = await Shop.find({ organizationId: organizationId })
+    .select("-accessToken")
     .then((shops) => {
       return shops;
     })
@@ -167,6 +168,24 @@ async function connectCourier(organizationId, courierId, credentials, name, sele
   }
 }
 
+exports.getOrganization = catchAsync(async (req, res) => {
+  const userId = req.cookies["userId"];
+  const organizationId = req.cookies["orgId"];
+  const organization = await Organization.findOne({ _id: organizationId }).select("-createdAt -updatedAt -configurationSetup");
+  res.status(httpStatus.OK).send(organization);
+});
+exports.updateOrganization = catchAsync(async (req, res) => {
+  const organizationId = req.cookies["orgId"];
+  const update = req.body;
+
+  const organization = await Organization.findByIdAndUpdate(organizationId, update, { new: true });
+  res.status(httpStatus.OK).send(organization);
+});
+exports.deleteOrganization = catchAsync(async (req, res) => {
+  const organizationId = req.cookies["orgId"];
+  await Organization.findByIdAndDelete(organizationId);
+  res.status(httpStatus.OK).send("Organization deleted successfully");
+});
 exports.verifyUserRole = (req, res, next) => {
   console.log("verifyUserRoles method....");
   next();

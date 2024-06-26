@@ -531,7 +531,6 @@ const createStructuredObj = async (orderObj) => {
     }, ${orderObj?.shippingAddress?.country ?? ""} ${orderObj?.shippingAddress?.zip ?? ""}`,
     companyLogo: companyLogo,
   };
-
   let packageDimensions = orderObj?.courierDetails?.packageDimensions || {};
   let packageEmptyWeight = packageDimensions?.emptyWeight || 0;
   let totalWeightInGrams = orderObj?.totalWeightGrams || 0;

@@ -149,7 +149,7 @@ async function fetchOrders(params) {
     }
 
     //get the latest orderId from the orders collection
-    const latestOrder = await Order.findOne({ shopId: shopDetails._id }).sort({ orderId: -1 });
+    const latestOrder = await Order.findOne({ shop: shopDetails._id }).sort({ orderId: -1 });
     const latestOrderId = latestOrder ? latestOrder.orderId : null;
     // Set up Shopify API client with the shop's details
     const shopifyClient = new Shopify(shopDetails.accessToken, shopDetails.storeUrl);
@@ -184,6 +184,7 @@ async function fetchOrders(params) {
 
         // Convert and insert orders into the database
         const convertedOrders = orders.map((order) => {
+          let paymentStatus = checkPaymentStatus(order);
           return {
             shop: shopDetails._id,
             orgId: shopDetails.organizationId,
@@ -201,11 +202,12 @@ async function fetchOrders(params) {
             courierDetails: {
               packageDimensions: findOptimalBox(getTotalWeight(order.line_items), boxes),
               packageWeight: getTotalWeight(order.line_items),
-              paymentMode: "prepaid",
+              paymentMode: paymentStatus,
             },
-            // paymentGateway: order.payment_gateway_names,
             financialStatus: order.financial_status,
             notes: order.note,
+            paymentGateway: order.payment_gateway_names,
+            paymentStatus: order.financial_status,
           };
         });
         await Order.insertMany(convertedOrders);
@@ -275,6 +277,23 @@ async function fulfillOrdersInShopify(ordersList) {
     console.error("Error while fulfilling orders in Shopify:", error);
     throw error;
   }
+}
+function checkPaymentStatus(order) {
+  let status = "";
+  if (
+    order.payment_gateway_names?.some((pg) => pg.toLowerCase().includes("cash on delivery")) &&
+    order.financial_status === "pending"
+  ) {
+    status = "COD";
+  } else {
+    status = "Prepaid";
+  }
+  return status;
+  // } else if (["paid", "partially_paid"].includes(order.financial_status)) {
+  //   status = "Prepaid";
+  // } else if (["authorized", "partially_refunded", "refunded", "voided"].includes(order.financial_status)) {
+  //   status = "Prepaid";
+  // }
 }
 
 module.exports = {

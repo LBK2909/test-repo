@@ -258,7 +258,7 @@ const orderSchema = new mongoose.Schema({
   },
   fulfillment: {
     type: fulfillmentSchema,
-    required: true,
+    required: false,
   },
   shippingService: {
     type: shippingServiceSchema,
@@ -266,6 +266,11 @@ const orderSchema = new mongoose.Schema({
   },
   courierDetails: {
     type: courierDetailsSchema,
+    required: false,
+    default: null,
+  },
+  paymentGateway: {
+    type: [String],
     required: false,
     default: null,
   },

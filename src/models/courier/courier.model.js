@@ -3,8 +3,8 @@ const Schema = mongoose.Schema;
 
 const endpointSchema = new Schema({
   rootUrl: { type: String, required: true },
-  authType: { type: String, required: true },
-  apiKey: { type: String, required: true },
+  // authType: { type: String, required: true },
+  // apiKey: { type: String, required: true },
 });
 
 const shippingModeSchema = new Schema({

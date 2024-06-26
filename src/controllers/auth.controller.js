@@ -19,6 +19,7 @@ exports.register = catchAsync(async (req, res) => {
     const organization = await Organization.create({
       organizationName: req.body.organizationName,
       configurationSetup: true,
+      phoneNumber: req.body.phoneNumber,
     });
     //get the organization id from the above created organization
     const organizationId = organization._id;
@@ -27,7 +28,6 @@ exports.register = catchAsync(async (req, res) => {
     const user = await User.create({
       email: req.body.email,
       password: req.body.password,
-      PhoneNumber: req.body.PhoneNumber,
       organizations: [
         {
           organizationId: organizationId,
@@ -71,7 +71,18 @@ exports.register = catchAsync(async (req, res) => {
     if (organizationCreated) {
       await Organization.deleteOne({ _id: organizationCreated._id });
     }
-    res.status(500).send({ message: "Registration failed, changes were rolled back", error });
+    if (error.code === 11000) {
+      const duplicateField = error.keyPattern ? Object.keys(error.keyPattern)[0] : null;
+
+      switch (duplicateField) {
+        case "organizationName":
+          return res.status(400).send({ message: "Organization name already exists. Please choose a different name." });
+        default:
+          return res.status(400).send({ message: "Duplicate key error. Please check your input." });
+      }
+    }
+
+    res.status(500).send({ message: "Internal server error", error: error.message });
   }
   //redirect the user to the signup page
 });

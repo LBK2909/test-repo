@@ -6,5 +6,5 @@ module.exports.Job = require("./queues/job.model");
 module.exports.Order = require("./order.model");
 module.exports.OrderSyncJob = require("./queues/orderSyncJobs");
 module.exports.Courier = require("./courier/courier.model");
-module.exports.OrganizationCourier = require("./courier/OrganizationCourier.model");
+module.exports.OrganizationCourier = require("./courier/organizationCourier.model");
 module.exports.Box = require("./config/box.model");

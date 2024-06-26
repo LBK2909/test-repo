@@ -27,6 +27,8 @@ router.post(
   auth.verifyToken,
   organizationController.connectToOrganization
 );
+router.get("/getOrganization", organizationController.getOrganization);
+router.put("/update-organization", organizationController.updateOrganization);
 router.get("/get-installed-shops/:organizationId", auth.verifyToken, organizationController.getInstalledShops);
 router.post("/setup/select-organization", organizationController.selectOrganization);
 router.post("/add-new-organization", organizationController.addNewOrganization);

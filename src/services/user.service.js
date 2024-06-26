@@ -1,7 +1,7 @@
 const httpStatus = require("http-status");
 const { User, Organization } = require("../models");
 const ApiError = require("../utils/ApiError");
-const CustomError = require("../utils/CustomError");
+const CustomError = require("../utils/customError");
 
 /** Create a organization
  *  @param {Object} organizationBody
