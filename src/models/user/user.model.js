@@ -58,6 +58,10 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    emailVerificationCode: {
+      type: Number,
+      default: null,
+    },
   },
   {
     timestamps: true,

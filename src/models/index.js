@@ -8,3 +8,4 @@ module.exports.OrderSyncJob = require("./queues/orderSyncJobs");
 module.exports.Courier = require("./courier/courier.model");
 module.exports.OrganizationCourier = require("./courier/organizationCourier.model");
 module.exports.Box = require("./config/box.model");
+module.exports.OTP = require("./otp.model");

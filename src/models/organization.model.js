@@ -18,7 +18,7 @@ const addressSchema = new Schema(
 const organizationSchema = new Schema(
   {
     _id: Number,
-    organizationName: { type: String, required: true, unique: true },
+    organizationName: { type: String, required: true },
     displayName: { type: String, required: false },
     phoneNumber: { type: Number, required: true },
     userId: { type: Number, default: null },

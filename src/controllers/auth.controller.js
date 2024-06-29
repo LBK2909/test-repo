@@ -1,10 +1,9 @@
 const httpStatus = require("http-status");
 const catchAsync = require("../utils/catchAsync");
-const { authService, userService, tokenService, shopifyService } = require("../services");
+const { authService, userService, tokenService, shopifyService, emailService } = require("../services");
 const { User, Organization } = require("../models");
 const CustomError = require("../utils/customError");
 const { Shop, ShopifyShop } = require("../models/shop.model");
-
 const mongoose = require("mongoose");
 exports.register = catchAsync(async (req, res) => {
   let organizationCreated = null;
@@ -18,7 +17,7 @@ exports.register = catchAsync(async (req, res) => {
     // create a new organization with the email and name from the request
     const organization = await Organization.create({
       organizationName: req.body.organizationName,
-      configurationSetup: true,
+      configurationSetup: false,
       phoneNumber: req.body.phoneNumber,
     });
     //get the organization id from the above created organization
@@ -28,6 +27,7 @@ exports.register = catchAsync(async (req, res) => {
     const user = await User.create({
       email: req.body.email,
       password: req.body.password,
+      isEmailVerified: true,
       organizations: [
         {
           organizationId: organizationId,
@@ -190,27 +190,63 @@ exports.shopifyAppInstallation = catchAsync(async (req, res) => {
     res.status(500).send(error.message);
   }
 });
+
+exports.checkEmailExists = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(200).send({ message: "Email already exists", isAvailable: false });
+    }
+
+    res.status(200).send({ message: "Email is available", isAvailable: true });
+  } catch (error) {
+    res.status(500).send({ message: "Internal server error", error: error.message });
+  }
+};
+exports.sendVerificationEmail = catchAsync(async (req, res) => {
+  let email = req.body?.email;
+  if (!email) {
+    return res.status(400).send({ message: "Email is required" });
+  }
+  const verifyEmailToken = await tokenService.generateVerifyEmailToken(email);
+  // await emailService.sendVerificationEmail(req.user.email, verifyEmailToken);
+  res.status(200).send(verifyEmailToken);
+});
+exports.verifyOTP = catchAsync(async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).send({ message: "Email and OTP are required" });
+  }
+  const isVerified = await tokenService.verifyOTP(email, otp);
+  if (!isVerified) {
+    return res.status(400).send({ message: "Invalid OTP" });
+  }
+  res.status(200).send({ message: "OTP verified" });
+});
 // const refreshTokens = catchAsync(async (req, res) => {
 //   const tokens = await authService.refreshAuth(req.body.refreshToken);
 //   res.send({ ...tokens });
 // });
 
-// const forgotPassword = catchAsync(async (req, res) => {
-//   const resetPasswordToken = await tokenService.generateResetPasswordToken(req.body.email);
-//   await emailService.sendResetPasswordEmail(req.body.email, resetPasswordToken);
-//   res.status(httpStatus.NO_CONTENT).send();
-// });
+exports.forgotPassword = catchAsync(async (req, res) => {
+  let email = req.query?.email;
+  if (!email) {
+    return res.status(400).send({ message: "Email is required" });
+  }
+  await authService.forgotPassword(email);
+  res.status(httpStatus.NO_CONTENT).send();
+});
 
-// const resetPassword = catchAsync(async (req, res) => {
-//   await authService.resetPassword(req.query.token, req.body.password);
-//   res.status(httpStatus.NO_CONTENT).send();
-// });
-
-// const sendVerificationEmail = catchAsync(async (req, res) => {
-//   const verifyEmailToken = await tokenService.generateVerifyEmailToken(req.user);
-//   await emailService.sendVerificationEmail(req.user.email, verifyEmailToken);
-//   res.status(httpStatus.NO_CONTENT).send();
-// });
+exports.resetPassword = catchAsync(async (req, res) => {
+  let { token, newPassword } = req.body;
+  if (!token || !newPassword) {
+    return res.status(400).send({ message: "Token and new password are required" });
+  }
+  let response = await authService.resetPassword(token, newPassword);
+  res.status(200).send(response);
+});
 
 // const verifyEmail = catchAsync(async (req, res) => {
 //   await authService.verifyEmail(req.query.token);

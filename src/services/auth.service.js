@@ -5,6 +5,10 @@ const Token = require("../models/token.model");
 const ApiError = require("../utils/ApiError");
 const { tokenTypes } = require("../config/tokens");
 const CustomError = require("../utils/customError");
+const { User } = require("../models");
+const emailService = require("./email.service");
+const config = require("../config");
+const jwt = require("jsonwebtoken");
 
 /**
  * Login with username and password
@@ -53,25 +57,48 @@ const logout = async (refreshToken) => {
 //   }
 // };
 
-// /**
-//  * Reset password
-//  * @param {string} resetPasswordToken
-//  * @param {string} newPassword
-//  * @returns {Promise}
-//  */
-// const resetPassword = async (resetPasswordToken, newPassword) => {
-//   try {
-//     const resetPasswordTokenDoc = await tokenService.verifyToken(resetPasswordToken, tokenTypes.RESET_PASSWORD);
-//     const user = await userService.getUserById(resetPasswordTokenDoc.user);
-//     if (!user) {
-//       throw new Error();
-//     }
-//     await userService.updateUserById(user.id, { password: newPassword });
-//     await Token.deleteMany({ user: user.id, type: tokenTypes.RESET_PASSWORD });
-//   } catch (error) {
-//     throw new ApiError(httpStatus.UNAUTHORIZED, 'Password reset failed');
-//   }
-// };
+const forgotPassword = async (email) => {
+  try {
+    const resetLink = await tokenService.generatePasswordResetToken(email);
+    console.log({ resetLink });
+    await emailService.sendResetPasswordEmail(email, resetLink);
+  } catch (err) {
+    console.log(err);
+    throw CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error in sending reset password email");
+  }
+};
+
+/**
+ * Reset password
+ * @param {string} resetPasswordToken
+ * @param {string} newPassword
+ * @returns {Promise}
+ */
+const resetPassword = async (token, newPassword) => {
+  try {
+    const decoded = jwt.verify(token, config.jwt.secret || null);
+    console.log({ decoded });
+    const { email, otp } = decoded;
+    const verifyToken = await tokenService.verifyPasswordResetToken(email, otp);
+    console.log({ verifyToken });
+    console.log({ newPassword });
+    if (!verifyToken) {
+      throw CustomError(httpStatus.UNAUTHORIZED, "Invalid token");
+    }
+    // Find the user and update the password
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw CustomError(httpStatus.NOT_FOUND, "User not found");
+    }
+
+    user.password = newPassword;
+    await user.save();
+    return { message: "Password reset successful" };
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(httpStatus.UNAUTHORIZED, "Password reset failed");
+  }
+};
 
 // /**
 //  * Verify email
@@ -95,7 +122,8 @@ const logout = async (refreshToken) => {
 module.exports = {
   loginUserWithEmailAndPassword,
   logout,
+  resetPassword,
+  forgotPassword,
   // refreshAuth,
-  // resetPassword,
   // verifyEmail,
 };

@@ -18,7 +18,6 @@ let shippingController = require("./controllers/shipping.controller");
 let shopifyController = require("./controllers/salesChannels/shopify.controller");
 // let { delhiveryController } = require("./controller/courierPartners");
 require("./config/logger");
-
 const app = express();
 connectDB();
 // Middleware

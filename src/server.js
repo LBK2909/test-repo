@@ -1,5 +1,4 @@
 require("dotenv").config({ path: ".env.production" });
-const app = require("./app");
 
 const http = require("http");
 const https = require("https");
