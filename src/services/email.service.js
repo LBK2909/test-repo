@@ -1,5 +1,6 @@
-const AWS = require("../config/awsConfig");
-const ses = new AWS.SES();
+const awsConfig = require("../config/awsConfig");
+const AWS = require("aws-sdk");
+const ses = new AWS.SES(awsConfig);
 const { imageToBase64 } = require("../utils/util.js");
 const path = require("path");
 const fs = require("fs");
@@ -202,6 +203,8 @@ const sendVerificationEmail = async (to, verificationCode) => {
   };
 
   try {
+    // The `.promise()` call might be on an JS SDK v2 client API.
+    // If yes, please remove .promise(). If not, remove this comment.
     await ses.sendEmail(params).promise();
     return true;
   } catch (error) {
@@ -230,6 +233,8 @@ const sendResetPasswordEmail = async (to, resetLink) => {
   };
 
   try {
+    // The `.promise()` call might be on an JS SDK v2 client API.
+    // If yes, please remove .promise(). If not, remove this comment.
     await ses.sendEmail(params).promise();
     return true;
   } catch (error) {
