@@ -63,8 +63,9 @@ const forgotPassword = async (email) => {
     console.log({ resetLink });
     await emailService.sendResetPasswordEmail(email, resetLink);
   } catch (err) {
-    console.log(err);
-    throw CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error in sending reset password email");
+    // console.log(err);
+    console.log(typeof err);
+    throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, err.message || "Error in sending reset password email");
   }
 };
 
@@ -83,12 +84,12 @@ const resetPassword = async (token, newPassword) => {
     console.log({ verifyToken });
     console.log({ newPassword });
     if (!verifyToken) {
-      throw CustomError(httpStatus.UNAUTHORIZED, "Invalid token");
+      throw new CustomError(httpStatus.UNAUTHORIZED, "Invalid token");
     }
     // Find the user and update the password
     const user = await User.findOne({ email });
     if (!user) {
-      throw CustomError(httpStatus.NOT_FOUND, "User not found");
+      throw new CustomError(httpStatus.NOT_FOUND, "User not found");
     }
 
     user.password = newPassword;
@@ -96,7 +97,10 @@ const resetPassword = async (token, newPassword) => {
     return { message: "Password reset successful" };
   } catch (error) {
     console.log(error);
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Password reset failed");
+    if (error.name === "TokenExpiredError") {
+      throw new CustomError(httpStatus.UNAUTHORIZED, "Token expired. Please request a new password reset.");
+    }
+    throw new CustomError(httpStatus.UNAUTHORIZED, "Password reset failed");
   }
 };
 

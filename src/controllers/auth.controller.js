@@ -217,7 +217,7 @@ exports.sendVerificationEmail = catchAsync(async (req, res) => {
 exports.verifyOTP = catchAsync(async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) {
-    return res.status(400).send({ message: "Email and OTP are required" });
+    return res.status(400).send({ message: "Email or OTP are required" });
   }
   const isVerified = await tokenService.verifyOTP(email, otp);
   if (!isVerified) {

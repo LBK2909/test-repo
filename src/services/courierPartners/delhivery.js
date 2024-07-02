@@ -5,6 +5,7 @@ const QRCode = require("qrcode");
 var fs = require("fs");
 const Delhivery = require("../../integrations/courierPartners/delhivery.js");
 const { updateJobStatus, updateOrderStatus } = require("../../utils/db.js");
+const { imageToBase64 } = require("../../utils/util.js");
 const CustomError = require("../../utils/customError");
 const { Order, OrganizationCourier, Organization } = require("../../models");
 const { Shop } = require("../../models/shop.model");
@@ -175,10 +176,10 @@ async function createQRCode(orderId, width = 55, height = 40) {
 const generateShippingLabelContent = async (data, page) => {
   try {
     let awbBarcode = await generateBarcode(data?.orderDetails?.trackingNumber);
-    const imageToBase64 = (filePath) => {
-      const image = fs.readFileSync(filePath);
-      return `data:image/png;base64,${image.toString("base64")}`;
-    };
+    // const imageToBase64 = (filePath) => {
+    //   const image = fs.readFileSync(filePath);
+    //   return `data:image/png;base64,${image.toString("base64")}`;
+    // };
     const assetsDir = path.join(process.cwd(), "src/assets");
     const BrandLogoImagePath = path.join(assetsDir, "cobay.png");
     const base64Image = await imageToBase64(BrandLogoImagePath);

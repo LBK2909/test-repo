@@ -1,12 +1,17 @@
 const AWS = require("../config/awsConfig");
 const ses = new AWS.SES();
-
+const { imageToBase64 } = require("../utils/util.js");
+const path = require("path");
+const fs = require("fs");
+const util = require("util");
+const readFile = util.promisify(fs.readFile);
 /*
  * Generate the HTML content for the verification email.
  * @param {string} verificationCode - The verification code to be included in the email.
  * @returns {string} - The HTML content of the email.
  */
-const generateVerificationEmailTemplate = (verificationCode) => {
+const generateVerificationEmailTemplate = async (verificationCode) => {
+  const companyLogo = await getCompanyLogo();
   return `
     <!DOCTYPE html>
     <html>
@@ -69,32 +74,26 @@ const generateVerificationEmailTemplate = (verificationCode) => {
     <body>
       <div class="container">
         <div class="header">
-          <img src="https://yourcompany.com/logo.png" alt="Your Company Logo">
+      <img src="${companyLogo}" width='150' height='75' alt="log Logo">
         </div>
         <div class="content">
           <h1>Verify your email</h1>
           <p>Please use the code below to verify your email address on YourCompany.</p>
           <div class="verification-code">${verificationCode}</div>
         </div>
-        <div class="footer">
-          <div class="social-icons">
-            <a href="#"><img src="https://yourcompany.com/icons/linkedin.png" alt="LinkedIn"></a>
-            <a href="#"><img src="https://yourcompany.com/icons/twitter.png" alt="Twitter"></a>
-            <a href="#"><img src="https://yourcompany.com/icons/facebook.png" alt="Facebook"></a>
-            <a href="#"><img src="https://yourcompany.com/icons/instagram.png" alt="Instagram"></a>
-            <a href="#"><img src="https://yourcompany.com/icons/youtube.png" alt="YouTube"></a>
-            <a href="#"><img src="https://yourcompany.com/icons/tiktok.png" alt="TikTok"></a>
-          </div>
-          <p>24/7 Live chat | <a href="https://yourcompany.com/blog">Read our blog</a></p>
-          <p>2711 Centerville Road, Wilmington, Delaware 19808, United States</p>
-          <p>&copy; 2024 YourCompany</p>
+  
+        <div class="footer" style="margin-top: 10px">
+        <p>10 Schalks Crossing Rd,Plainsboro, NJ 08536, United States</p>
+      </div>
         </div>
       </div>
     </body>
     </html>
   `;
 };
-const resetPasswordTemplate = (resetLink) => {
+const resetPasswordTemplate = async (resetLink) => {
+  const companyLogo = await getCompanyLogo();
+
   return `
   <!DOCTYPE html>
   <html lang="en">
@@ -110,39 +109,69 @@ const resetPasswordTemplate = (resetLink) => {
               padding: 20px;
           }
           .container {
-              background-color: #ffffff;
-              padding: 20px;
-              border-radius: 5px;
-              max-width: 600px;
-              margin: auto;
-              box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
           }
-          .button {
-              background-color: #007bff;
-              color: #ffffff;
+          .link-btn {
               padding: 10px 20px;
               text-decoration: none;
               border-radius: 5px;
+              background: linear-gradient(45deg, #275499, #2871df) !important;
+              color: white;
+              font-weight: bold !important;
+              width:300px;
+              text-align:center;    
           }
           .footer {
               margin-top: 20px;
               font-size: 12px;
               color: #666666;
           }
+          .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #999999;
+          }
+          .footer a {
+            color: #007bff;
+            text-decoration: none;
+          }
+          .container h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333333;
+          }
+          .container p {
+            font-size: 16px;
+            margin-bottom: 20px;
+          }
+          .main p {
+            font-size: 16px;
+            color: #666666;
+            margin-bottom: 20px;
+          }
       </style>
   </head>
   <body>
-      <div class="container">
-          <h2>Password Reset Request</h2>
-          <p>Hello,</p>
-          <p>We received a request to reset your password. Click the button below to reset it:</p>
-          <a href=${resetLink} class="button">Reset Password</a>
-          <p>If you didn't request a password reset, please ignore this email.</p>
-          <p>Thanks,<br>Your Company Team</p>
-          <div class="footer">
-              <p>If you have any questions, feel free to contact our support team.</p>
-          </div>
-      </div>
+  <div class="container">
+  <div class="header">
+    <img src="${companyLogo}" width="150" height="75" alt="log Logo" />
+  </div>
+    <div class="main">
+    <h1>Password Reset Request</h1>
+    <p>Hello, We received a request to reset your password.</p>
+    <p>Click the button below to reset it:</p>
+    <div style="margin: 30px auto">
+      <a href="${resetLink}" class="link-btn" style="margin: 10px auto">Reset Password</a>
+    </div>
+    <p>If you didn't request a password reset, please ignore this email.</p>
+    </div>
+    </div>
   </body>
   </html>  
     `;
@@ -154,8 +183,7 @@ const resetPasswordTemplate = (resetLink) => {
  * @param {string} verificationCode - The verification code to be included in the email.
  */
 const sendVerificationEmail = async (to, verificationCode) => {
-  const emailHtml = generateVerificationEmailTemplate(verificationCode);
-
+  const emailHtml = await generateVerificationEmailTemplate(verificationCode);
   const params = {
     Source: process.env.SES_SENDER_EMAIL,
     Destination: {
@@ -167,7 +195,7 @@ const sendVerificationEmail = async (to, verificationCode) => {
       },
       Body: {
         Html: {
-          Data: emailHtml,
+          Data: emailHtml.toString(),
         },
       },
     },
@@ -182,7 +210,7 @@ const sendVerificationEmail = async (to, verificationCode) => {
   }
 };
 const sendResetPasswordEmail = async (to, resetLink) => {
-  const passwordTemplate = resetPasswordTemplate(resetLink);
+  const passwordTemplate = await resetPasswordTemplate(resetLink);
 
   const params = {
     Source: process.env.SES_SENDER_EMAIL,
@@ -195,7 +223,7 @@ const sendResetPasswordEmail = async (to, resetLink) => {
       },
       Body: {
         Html: {
-          Data: passwordTemplate,
+          Data: passwordTemplate.toString(),
         },
       },
     },
@@ -210,6 +238,12 @@ const sendResetPasswordEmail = async (to, resetLink) => {
   }
 };
 
+async function getCompanyLogo() {
+  const assetsDir = path.join(process.cwd(), "src/assets");
+  const BrandLogoImagePath = path.join(assetsDir, "cobayLogo.png");
+  const base64Image = await imageToBase64(BrandLogoImagePath);
+  return base64Image;
+}
 module.exports = {
   sendVerificationEmail,
   sendResetPasswordEmail,

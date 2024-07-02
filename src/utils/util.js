@@ -1,3 +1,4 @@
+const fs = require("fs");
 function chainMiddleware(middlewares) {
   return (req, res, next) => {
     const dispatch = (index) => {
@@ -47,8 +48,12 @@ function findOptimalBox(totalWeight, boxes) {
   };
   return obj;
 }
-
+function imageToBase64(filePath) {
+  const image = fs.readFileSync(filePath);
+  return `data:image/png;base64,${image.toString("base64")}`;
+}
 module.exports = {
   chainMiddleware,
   findOptimalBox,
+  imageToBase64,
 };

@@ -25,7 +25,7 @@ router.get("/shopify/callback", authController.shopifyAppInstallation);
 router.post("/check-email", authController.checkEmailExists);
 router.post("/send-verification-email", authController.sendVerificationEmail);
 router.post("/verify-otp", authController.verifyOTP);
-router.post("/forgot-password", authController.forgotPassword);
+router.get("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
 // router.post('/register', validate(authValidation.register), authController.register);
 // router.post('/login', validate(authValidation.login), authController.login);

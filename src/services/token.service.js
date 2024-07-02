@@ -125,6 +125,8 @@ const verifyOTP = async (email, otp) => {
     if (new Date() > existingOTP.expirationTime) {
       throw new CustomError(httpStatus.BAD_REQUEST, "OTP expired");
     }
+    await OTP.findByIdAndDelete(existingOTP._id);
+
     return true;
   } catch (err) {
     console.log(err);
@@ -134,11 +136,21 @@ const verifyOTP = async (email, otp) => {
 
 const generatePasswordResetToken = async (email) => {
   try {
+    const userExists = await userService.getUserByEmail(email);
+    if (!userExists) {
+      throw new CustomError(httpStatus.NOT_FOUND, "User not exists");
+    }
     const verType = OTP_TYPES.PASSWORD_RESET;
     const JWT_SECRET = config.jwt.secret;
     const existingOTP = await OTP.findOne({ email, type: verType });
     if (existingOTP) {
-      await OTP.findByIdAndDelete(existingOTP._id);
+      if (moment(existingOTP.expirationTime).isAfter(moment())) {
+        // If OTP exists and is not expired
+        throw new CustomError(httpStatus.BAD_REQUEST, "A password reset link has already been sent to your email.");
+      } else {
+        // If OTP exists but is expired, remove it
+        await OTP.findByIdAndDelete(existingOTP._id);
+      }
     }
 
     const otp = generateVerificationCode();
