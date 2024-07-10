@@ -19,6 +19,7 @@ exports.register = catchAsync(async (req, res) => {
       organizationName: req.body.organizationName,
       configurationSetup: false,
       phoneNumber: req.body.phoneNumber,
+      isDefault: true,
     });
     //get the organization id from the above created organization
     const organizationId = organization._id;
@@ -61,7 +62,14 @@ exports.register = catchAsync(async (req, res) => {
       path: "/",
       expires: new Date(Date.now() + 86400000),
     });
-    res.send({ user, tokens });
+    res.cookie("orgId", organizationId, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+      expires: new Date(Date.now() + 86400000),
+    });
+    res.send({ user, organization });
   } catch (error) {
     console.log("Registration failed:", error);
     // If an error occurs, attempt to rollback changes
@@ -89,13 +97,31 @@ exports.register = catchAsync(async (req, res) => {
 
 exports.login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
-  const user = await authService.loginUserWithEmailAndPassword(email, password);
+  let user = await authService.loginUserWithEmailAndPassword(email, password);
   const tokens = await tokenService.generateAuthTokens(user);
   let userId = user._id;
   if (!userId || !tokens) {
     return res.status(400).send({ message: "Invalid credentials" });
   }
-  console.log({ tokens });
+
+  // Fetch organization details for each organization the user is part of
+  const organizations = await Promise.all(
+    user.organizations.map(async (org) => {
+      org = org.toObject();
+      const organizationDetails = await Organization.findOne({ _id: org.organizationId }).select(
+        " -updatedAt -__v -configurationSetup"
+      );
+      // console.log({ organizationDetails });
+      let obj = {
+        ...org,
+        ...organizationDetails.toObject(),
+      };
+      return obj;
+    })
+  );
+  // Remove the user's password from the response
+  user.password = undefined;
+
   res.cookie("accessToken", tokens, {
     httpOnly: true,
     secure: false,
@@ -110,7 +136,15 @@ exports.login = catchAsync(async (req, res) => {
     path: "/",
     expires: new Date(Date.now() + 86400000),
   });
-  res.send({ user });
+  let currentOrganizationId = organizations.find((org) => org.isDefault)?.organizationId;
+  res.cookie("orgId", currentOrganizationId, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(Date.now() + 86400000),
+  });
+  res.send({ user, organizations, currentOrganizationId });
 });
 
 exports.googleAuthCallback = async (req, res) => {
@@ -145,7 +179,14 @@ exports.logout = catchAsync(async (req, res) => {
     path: "/",
     expires: new Date(0),
   });
-
+  // Clear the userId cookie
+  res.cookie("orgId", "", {
+    httpOnly: true,
+    secure: false, // Set to true if running over HTTPS in production
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(0),
+  });
   res.status(200).send("Logged out");
 });
 

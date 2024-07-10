@@ -1,6 +1,6 @@
 const { Worker } = require("bullmq");
 const { shippingService } = require("../services/index.js");
-const { shippingQueue } = require("./queues/index.js");
+const { shippingQueue, orderSyncQueue } = require("./queues/index.js");
 const redisConfig = require("../config/redis");
 
 const { delhivery } = require("../services/courierPartners/index.js");
@@ -85,6 +85,8 @@ const startWorkers = async () => {
   // Drain and clean queues before starting
   await shippingQueue.drain(true);
   await shippingQueue.clean(0);
+  await orderSyncQueue.drain(true);
+  await orderSyncQueue.clean(0);
   return workers;
 };
 module.exports = { startWorkers };

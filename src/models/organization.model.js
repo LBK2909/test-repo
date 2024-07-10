@@ -6,11 +6,13 @@ const { union } = require("lodash");
 
 const addressSchema = new Schema(
   {
+    apartment: String,
     street: String,
     city: String,
     state: String,
     zip: String,
     country: String,
+    phoneNumber: Number,
   },
   { _id: false }
 );
@@ -20,11 +22,15 @@ const organizationSchema = new Schema(
     _id: Number,
     organizationName: { type: String, required: true },
     displayName: { type: String, required: false },
-    phoneNumber: { type: Number, required: true },
     userId: { type: Number, default: null },
     configurationSetup: { type: Boolean, default: false },
     billingAddress: addressSchema,
     companyLogo: { type: String, default: null },
+    website: {
+      type: String,
+      required: false,
+    },
+    isDefault: { type: Boolean, default: false },
     // contactInformation: {
     //   email: { type: String, required: true },
     //   phone: String,

@@ -98,7 +98,15 @@ const getUserById = async (id) => {
 const getUserByEmail = async (email) => {
   return User.findOne({ email });
 };
-
+const getUserOrganizationlists = async (email) => {
+  return User.findOne({ email })
+    .then((res) => {
+      return res;
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
 /**
  * Update user by id
  * @param {ObjectId} userId
@@ -140,4 +148,5 @@ module.exports = {
   getUserByEmail,
   updateUserById,
   deleteUserById,
+  getUserOrganizationlists,
 };

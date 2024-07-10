@@ -42,3 +42,23 @@ exports.createOrganization = async (userId, organizationData) => {
 
   return user.organizations;
 };
+exports.getOrganizations = async (userId) => {
+  // Query the user collection using the userId
+  const user = await User.findById(userId);
+  // Fetch organization details for each organization the user is part of
+  const organizations = await Promise.all(
+    user.organizations.map(async (org) => {
+      org = org.toObject();
+      const organizationDetails = await Organization.findOne({ _id: org.organizationId }).select(
+        " -updatedAt -__v -configurationSetup"
+      );
+      // console.log({ organizationDetails });
+      let obj = {
+        ...org,
+        ...organizationDetails.toObject(),
+      };
+      return obj;
+    })
+  );
+  return organizations;
+};

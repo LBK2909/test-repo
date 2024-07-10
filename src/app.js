@@ -20,6 +20,9 @@ let shopifyController = require("./controllers/salesChannels/shopify.controller"
 require("./config/logger");
 const app = express();
 connectDB();
+// Increase payload limit
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
 // Middleware
 app.use(
   cors({

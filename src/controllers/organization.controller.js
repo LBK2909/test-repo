@@ -5,20 +5,20 @@ const { Shop, ShopifyShop } = require("../models/shop.model");
 const CustomError = require("../utils/customError");
 const organizationService = require("../services/organization.service");
 
-exports.organizationList = catchAsync(async (req, res) => {
+exports.organizations = catchAsync(async (req, res) => {
   const userId =
-    req.query?.userId ||
+    req.cookies["userId"] ||
     (() => {
       throw new CustomError(httpStatus.BAD_REQUEST, "User Id is required");
     })();
+  let organizations = await organizationService.getOrganizations(userId);
+  // const userId =
+  //   req.query?.userId ||
+  //   (() => {
+  //     throw new CustomError(httpStatus.BAD_REQUEST, "User Id is required");
+  //   })();
 
-  // Query the user collection using the userId
-  const user = await User.findById(userId);
-
-  // Get the organization list of the user
-  const organizationList = user.organizations;
-
-  res.status(httpStatus.CREATED).send({ organizationList });
+  res.status(httpStatus.CREATED).send(organizations);
 });
 
 exports.getInstalledShops = catchAsync(async (req, res) => {
@@ -105,13 +105,12 @@ exports.addNewOrganization = catchAsync(async (req, res) => {
   const userId = req.cookies["userId"] || null;
   const organizationData = req.body;
   const organizationList = await organizationService.createOrganization(userId, organizationData);
-  res.status(httpStatus.CREATED).send({ organizationList });
+  let organizations = await organizationService.getOrganizations(userId);
+  res.status(httpStatus.CREATED).send(organizations);
 });
 
 exports.connectCourierToOrganization = catchAsync(async (req, res) => {
   const { name, courierId, credentials, selectedShippingModes, isProductionEnvironment } = req.body;
-  console.log("courierId==", courierId);
-  console.log("credentials==", credentials);
   // return;
   try {
     let organizationId = parseInt(req.cookies["orgId"]) || null;
@@ -171,9 +170,64 @@ async function connectCourier(organizationId, courierId, credentials, name, sele
 exports.getOrganization = catchAsync(async (req, res) => {
   const userId = req.cookies["userId"];
   const organizationId = req.cookies["orgId"];
-  const organization = await Organization.findOne({ _id: organizationId }).select("-createdAt -updatedAt -configurationSetup");
+  let organization = await Organization.findOne({ _id: organizationId }).select("-createdAt -updatedAt -configurationSetup");
+
+  if (organization) {
+    const user = await User.findOne({ _id: organization.userId }).select("-password");
+    organization = organization.toObject();
+
+    // Add the adminUser field
+    organization.adminUser = user;
+  }
   res.status(httpStatus.OK).send(organization);
 });
+exports.defaultOrganization = catchAsync(async (req, res) => {
+  let orgId = req.params.orgId;
+  // Mark all organizations as not default
+  await Organization.updateMany({}, { isDefault: false });
+
+  // Mark the selected organization as default
+  let organization = await Organization.findOneAndUpdate({ _id: orgId }, { isDefault: true }, { new: true });
+
+  res.status(httpStatus.OK).send(organization);
+});
+
+// exports.getOrganizationMembers = catchAsync(async (req, res) => {
+//   const userId = req.cookies["userId"];
+//   const organizationId = req.cookies["orgId"];
+//   let organization = await Organization.findOne({ _id: organizationId }).select("-createdAt -updatedAt -configurationSetup");
+
+//   if (organization) {
+//     const user = await User.findOne({ _id: organization.userId }).select("-password");
+//     console.log(user);
+//     organization = organization.toObject();
+
+//     // Add the adminUser field
+//     organization.adminUser = user;
+//   }
+//   console.log(organization);
+//   res.status(httpStatus.OK).send(organization);
+// });
+
+exports.getOrganizationMembers = catchAsync(async (req, res) => {
+  const organizationId = req.cookies["orgId"];
+
+  if (!organizationId) {
+    return res.status(httpStatus.BAD_REQUEST).send({ message: "Organization ID is required" });
+  }
+
+  try {
+    // Find users who are members of the organization
+    const members = await User.find({
+      "organizations.organizationId": organizationId,
+    }).select("organizations email"); // Exclude password field
+
+    res.status(httpStatus.OK).send(members);
+  } catch (error) {
+    res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ message: "Error fetching organization members", error: error.message });
+  }
+});
+
 exports.updateOrganization = catchAsync(async (req, res) => {
   const organizationId = req.cookies["orgId"];
   const update = req.body;

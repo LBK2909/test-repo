@@ -7,6 +7,8 @@ const { organizationValidation, validate } = require("../validations/index");
 const { chainMiddleware } = require("../utils/util");
 const verifyAuthOnly = chainMiddleware([auth.verifyToken]);
 const verifyAccess = chainMiddleware([auth.verifyToken, auth.verifyUserOrganization]);
+const upload = require("../config/fileHandlerConfig"); // Adjust the path as needed
+
 // Middleware to conditionally apply verifyAccess
 const conditionalVerifyAccess = (req, res, next) => {
   // List of paths that don't require the verifyAccess middleware
@@ -19,7 +21,7 @@ const conditionalVerifyAccess = (req, res, next) => {
 };
 // Apply this conditional middleware globally if all routes go through one entry point
 router.use(conditionalVerifyAccess);
-router.get("/setup/test-endpoint", organizationController.organizationList);
+router.get("/organizations", organizationController.organizations);
 router.post(
   "/connect-to-organization",
   organizationValidation.connectToOrganization(),
@@ -28,10 +30,12 @@ router.post(
   organizationController.connectToOrganization
 );
 router.get("/getOrganization", organizationController.getOrganization);
+router.get("/get-organization-members", organizationController.getOrganizationMembers);
 router.put("/update-organization", organizationController.updateOrganization);
 router.get("/get-installed-shops/:organizationId", auth.verifyToken, organizationController.getInstalledShops);
 router.post("/setup/select-organization", organizationController.selectOrganization);
 router.post("/add-new-organization", organizationController.addNewOrganization);
+router.get("/default-organization/:orgId", organizationController.defaultOrganization);
 // router.put("/update-organization-courier/:id", organizationController.updateOrganizationCourier);
 // router.post("/select-organization", (req, res) => {
 //   const { organizationId } = req.body;

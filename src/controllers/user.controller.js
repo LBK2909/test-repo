@@ -3,6 +3,7 @@ const pick = require("../utils/pick");
 const ApiError = require("../utils/ApiError");
 const catchAsync = require("../utils/catchAsync");
 const { userService } = require("../services");
+const { Organization, User } = require("../models");
 
 const createUser = catchAsync(async (req, res) => {
   const user = await userService.createUser(req.body);
@@ -20,10 +21,26 @@ const getUser = catchAsync(async (req, res) => {
   const userId = req.cookies["userId"] || null;
   const orgId = req.cookies["orgId"] || null;
   const user = await userService.getUserById(userId);
+
+  // Fetch organization details for each organization the user is part of
+  const organizations = await Promise.all(
+    user.organizations.map(async (org) => {
+      org = org.toObject();
+      const organizationDetails = await Organization.findOne({ _id: org.organizationId }).select(
+        " -updatedAt -__v -configurationSetup"
+      );
+      let obj = {
+        ...org,
+        ...organizationDetails.toObject(),
+      };
+      return obj;
+    })
+  );
   const currentOrganizationId = getCurrentOrganizationId(orgId, user);
   let response = {
     user: user,
     currentOrganizationId: parseInt(currentOrganizationId),
+    organizations,
   };
   // const user = await userService.getUserById(req.params.userId);
   if (!user) {
@@ -31,9 +48,12 @@ const getUser = catchAsync(async (req, res) => {
   }
   res.send(response);
 });
-
-const updateUser = catchAsync(async (req, res) => {
-  const user = await userService.updateUserById(req.params.userId, req.body);
+const getUserById = catchAsync(async (req, res) => {
+  const userId = req.cookies["userId"] || null;
+  const user = await userService.getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+  }
   res.send(user);
 });
 
@@ -51,10 +71,17 @@ function getCurrentOrganizationId(orgId, user) {
   }
   return currentOrgId;
 }
+const updateUser = catchAsync(async (req, res) => {
+  const userId = req.cookies["userId"];
+  const update = req.body;
+  const user = await User.findByIdAndUpdate(userId, update, { new: true });
+  res.status(httpStatus.OK).send(user);
+});
 module.exports = {
   createUser,
   getUsers,
   getUser,
-  updateUser,
   deleteUser,
+  getUserById,
+  updateUser,
 };

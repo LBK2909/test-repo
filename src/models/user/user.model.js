@@ -15,7 +15,26 @@ const userSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "organization",
     },
-
+    name: {
+      type: String,
+      required: false,
+      default: null,
+    },
+    displayName: {
+      type: String,
+      required: false,
+      default: null,
+    },
+    phoneNumber: {
+      type: Number,
+      required: false,
+      default: null,
+    },
+    image: {
+      type: String,
+      required: false,
+      default: null,
+    },
     organizations: [
       {
         organizationId: {
@@ -24,7 +43,6 @@ const userSchema = mongoose.Schema(
         },
         name: String,
         roles: [String],
-        default: [],
       },
     ],
     email: {
@@ -53,6 +71,7 @@ const userSchema = mongoose.Schema(
     },
     googleId: {
       type: String,
+      default: "",
     },
     isEmailVerified: {
       type: Boolean,
