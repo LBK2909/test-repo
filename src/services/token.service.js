@@ -91,11 +91,15 @@ const generateVerifyEmailToken = async (email) => {
     const verificationType = OTP_TYPES.EMAIL_VERIFICATION;
     const existingOTP = await OTP.findOne({ email, type: verificationType });
     if (existingOTP) {
-      // Remove the old OTP
-      await OTP.findByIdAndDelete(existingOTP._id);
+      const oneMinuteAgo = new Date(Date.now() - 1 * 60000); // 1 minute ago
+      // Check if the existing OTP is more than a minute old
+      if (existingOTP.createdAt < oneMinuteAgo) {
+        // Remove the old OTP
+        await OTP.findByIdAndDelete(existingOTP._id);
+      } else {
+        return { message: "An OTP was recently sent. Please try again later." };
+      }
     }
-    // Save new OTP to the database
-
     const otp = generateVerificationCode();
     const expirationTime = new Date(Date.now() + 10 * 60000); // OTP valid for 10 minutes
 

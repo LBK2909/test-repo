@@ -84,7 +84,7 @@ const resetPassword = async (token, newPassword) => {
     console.log({ verifyToken });
     console.log({ newPassword });
     if (!verifyToken) {
-      throw new CustomError(httpStatus.UNAUTHORIZED, "Invalid token");
+      throw new CustomError(httpStatus.UNAUTHORIZED, "Invalid token or expired. Please request a new password reset.");
     }
     // Find the user and update the password
     const user = await User.findOne({ email });
@@ -100,7 +100,7 @@ const resetPassword = async (token, newPassword) => {
     if (error.name === "TokenExpiredError") {
       throw new CustomError(httpStatus.UNAUTHORIZED, "Token expired. Please request a new password reset.");
     }
-    throw new CustomError(httpStatus.UNAUTHORIZED, "Password reset failed");
+    throw new CustomError(httpStatus.UNAUTHORIZED, error.message || "Password reset failed");
   }
 };
 

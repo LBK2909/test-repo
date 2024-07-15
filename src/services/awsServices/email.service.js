@@ -73,7 +73,7 @@ const generateVerificationEmailTemplate = (verificationCode) => {
         </div>
         <div class="content">
           <h1>Verify your email</h1>
-          <p>Please use the code below to verify your email address on YourCompany.</p>
+          <p>Please use the code below to verify your email address.</p>
           <div class="verification-code">${verificationCode}</div>
         </div>
         <div class="footer">

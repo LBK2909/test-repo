@@ -15,7 +15,7 @@ exports.register = catchAsync(async (req, res) => {
       return res.status(400).send({ message: "User already exists" });
     }
     // create a new organization with the email and name from the request
-    const organization = await Organization.create({
+    let organization = await Organization.create({
       organizationName: req.body.organizationName,
       configurationSetup: false,
       phoneNumber: req.body.phoneNumber,
@@ -43,6 +43,8 @@ exports.register = catchAsync(async (req, res) => {
     //add the user id to the organization
     organization.userId = user._id;
     organization.save();
+    organization = organization.toObject();
+    organization.organizationId = organization._id;
     const tokens = await tokenService.generateAuthTokens(user);
     let userId = user._id;
     if (!userId || !tokens) {
@@ -69,7 +71,7 @@ exports.register = catchAsync(async (req, res) => {
       path: "/",
       expires: new Date(Date.now() + 86400000),
     });
-    res.send({ user, organization });
+    res.send({ user, organization: [organization] });
   } catch (error) {
     console.log("Registration failed:", error);
     // If an error occurs, attempt to rollback changes
