@@ -111,7 +111,6 @@ exports.addNewOrganization = catchAsync(async (req, res) => {
 
 exports.connectCourierToOrganization = catchAsync(async (req, res) => {
   const { name, courierId, credentials, selectedShippingModes, isProductionEnvironment } = req.body;
-  // return;
   try {
     let organizationId = parseInt(req.cookies["orgId"]) || null;
     if (!organizationId) {
@@ -128,7 +127,6 @@ exports.connectCourierToOrganization = catchAsync(async (req, res) => {
     );
     res.status(httpStatus.OK).send(orgCourier);
   } catch (error) {
-    console.error(error);
     res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ message: error.message });
   }
 });
@@ -136,7 +134,7 @@ async function connectCourier(organizationId, courierId, credentials, name, sele
   try {
     // Find the courier to get the required credentials
     const courier = await Courier.findById(courierId);
-    if (!courier) throw new Error("Courier not found");
+    if (!courier) throw new CustomError("Courier not found");
 
     // Construct the credentials map
     const credentialsObj = {};
@@ -144,7 +142,7 @@ async function connectCourier(organizationId, courierId, credentials, name, sele
       if (credentials.hasOwnProperty(key)) {
         credentialsObj[key] = credentials[key];
       } else {
-        throw new Error(`Credential ${key} is required but not provided`);
+        throw new CustomError(`Credential ${key} is required but not provided`);
       }
     });
 
@@ -163,7 +161,7 @@ async function connectCourier(organizationId, courierId, credentials, name, sele
     return orgCourier;
   } catch (error) {
     console.error("Failed to connect courier to organization:", error);
-    throw error;
+    throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 }
 

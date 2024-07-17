@@ -62,7 +62,7 @@ class DelhiveryCourier {
       let consignee = this.order.shippingAddress || {};
       let todayDate = moment().format("YYYY-MM-DD HH:mm:ss");
       todayDate = todayDate.toString();
-      let consigneeName = consignee.name || "";
+      let consigneeName = consignee?.name || consignee?.first_name || "";
       let consigneeStreetLines = (consignee.address1 || "") + "," + (consignee.address2 || "");
       let consigneeCity = consignee.city || "";
       let consigneeState = consignee.state || "";
@@ -80,7 +80,6 @@ class DelhiveryCourier {
       let shippingMode = this.getShippingMode(this.order) || "";
       const PAYMENT_MODE = this.order?.courierDetails?.paymentMode || "Pre-paid";
       const ADDRESS_TYPE = "office";
-
       let data = {
         shipments: [
           {

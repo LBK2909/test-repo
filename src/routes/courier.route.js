@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/couriers", auth.verifyToken, courierController.getCouriers);
 router.get("/courier/:id", auth.verifyToken, courierController.getCourier);
 router.put("/courier/:id", auth.verifyToken, courierController.updateCourier);
-router.post("/courier", auth.verifyToken, courierController.addCourier);
+router.post("/courier", courierController.addCourier);
 router.get("/get-couriers-by-organization", courierController.getCouriersByOrganization);
 router.get("/get-courier-by-organization/:id", courierController.getCourierByOrganization);
 router.delete("/remove-courier-by-organization/:id", courierController.removeOrganizationCourier);

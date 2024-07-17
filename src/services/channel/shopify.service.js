@@ -8,8 +8,7 @@ const { Order, OrderSyncJob, Box } = require("../../models");
 const Shopify = require("../../integrations/salesChannels/shopify");
 const { orderSyncQueue } = require("../../workers/queues");
 async function authenticateShop(shop) {
-  const existingShop = await Shop.findOne({ name: shop });
-  console.log({ existingShop });
+  const existingShop = await Shop.findOne({ storeUrl: shop });
   if (existingShop) {
     if (existingShop.organizationId) {
       return { url: `${process.env.CLIENT_BASE_URL}/organizations`, newShop: false };

@@ -16,6 +16,20 @@ const shopSchema = new mongoose.Schema(
   {
     timestamps: true,
     discriminatorKey: "channel",
+    toJSON: {
+      transform: function (doc, ret) {
+        // Delete sensitive fields
+        delete ret.accessToken;
+        return ret;
+      },
+    },
+    toObject: {
+      transform: function (doc, ret) {
+        // Delete sensitive fields
+        delete ret.accessToken;
+        return ret;
+      },
+    },
   }
 );
 

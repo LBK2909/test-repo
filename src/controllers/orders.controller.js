@@ -40,7 +40,8 @@ exports.updateOrder = catchAsync(async (req, res) => {
         console.log(err);
         throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error updating orders");
       });
-    res.status(200).send(updated);
+    let order = await Order.findById(id).populate("shop");
+    res.status(200).send(order);
   } catch (err) {
     console.log("error in updateOrder controller...", err);
     res.status(503).send(err);

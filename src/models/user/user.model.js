@@ -84,6 +84,20 @@ const userSchema = mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: {
+      transform: function (doc, ret) {
+        // Delete sensitive fields
+        delete ret.password;
+        return ret;
+      },
+    },
+    toObject: {
+      transform: function (doc, ret) {
+        // Delete sensitive fields
+        delete ret.password;
+        return ret;
+      },
+    },
   },
   { _id: false }
 );

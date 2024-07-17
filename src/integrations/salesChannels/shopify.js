@@ -38,7 +38,6 @@ class Shopify {
           return payloadObj;
         })
         .catch(function (error) {
-          console.log(error.response.data);
           throw new CustomError(500, "Failed to Fetch Orders from Shopify API");
         });
       return apiResponse;

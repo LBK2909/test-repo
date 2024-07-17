@@ -1,10 +1,8 @@
 const jwt = require("jsonwebtoken");
 const config = require("../config/config");
 const httpStatus = require("http-status");
-
+const { User } = require("../models");
 exports.verifyToken = (req, res, next) => {
-  console.log("verifyToken middleware..");
-
   let jwtConfigToken = config.jwt.secret || null;
   if (!jwtConfigToken) {
     return res.status(httpStatus["503_NAME"]).send({ message: "Unauthorized!" });
@@ -22,12 +20,9 @@ exports.verifyToken = (req, res, next) => {
   });
 };
 exports.verifyUserOrganization = async (req, res, next) => {
-  console.log("verify organization method...");
-  next();
-  return;
   // Get the cookie token
-  let userId = req.cookies["userId"];
-  let organizationId = req.cookies["organizationId"];
+  let userId = parseInt(req.cookies["userId"]);
+  let organizationId = parseInt(req.cookies["orgId"]);
   if (!userId || !organizationId) {
     return res.status(httpStatus.BAD_REQUEST).send({ message: "User ID and organization ID are required" });
   }
@@ -37,9 +32,10 @@ exports.verifyUserOrganization = async (req, res, next) => {
 
   //check if the user has the necessary information to connect the store
   let userOrganization = user.organizations || [];
+
   const organizationRole = userOrganization.find((org) => org.organizationId.toString() === organizationId.toString());
   //if the orgnaizationRole is true   then the user has the permission to connect the store
-  if (!organizationRole) {
+  if (organizationRole) {
     next();
   } else {
     return res.status(httpStatus.FORBIDDEN).send({ message: "User does not have permission to update store" });
