@@ -1,4 +1,4 @@
-require("dotenv").config({ path: ".env.development" });
+require("dotenv").config({ path: ".env" });
 // Start the local server
 // const PORT = process.env.PORT || 80;
 // app.listen(PORT, () => {

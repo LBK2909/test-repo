@@ -310,8 +310,8 @@ async function uploadToS3Bucket(file) {
       let filePath = file.url;
       // console.log("upload to s3 bucket".blue.bold);
       const CREDENTIALS = {
-        accessKeyId: process.env.AWS_ACCESS_KEY,
-        secretAccessKey: process.env.AWS_SECERT_KEY,
+        accessKeyId: process.env.AWS_PROG_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_PROG_SECRET_ACCESS_KEY,
       };
       const s3Client = new S3Client({
         region: process.env.AWS_REGION,
