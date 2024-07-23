@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const routes = require("./routes");
 const authRoutes = require("./routes/auth.route"); // Import auth routes
+const shopifyWebhookRoutes = require("./routes/shopify.webhooks.route");
 const connectDB = require("./config/db");
 const colors = require("colors");
 const CustomError = require("./utils/customError");
@@ -47,9 +48,10 @@ app.use(bodyParser.json());
 // v1 api routes
 app.use("/v1", routes);
 app.use("/auth", authRoutes);
+app.use("/webhooks", shopifyWebhookRoutes);
 // Basic Route
 app.get("/", (req, res) => {
-  res.send("Hello World!...");
+  res.send("");
 });
 app.get("/error", (req, res, next) => {
   throw new CustomError(404, "This is a custom error message");

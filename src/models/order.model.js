@@ -203,6 +203,10 @@ const orderSchema = new mongoose.Schema({
     ref: "Shop",
     required: true,
   },
+  storeId: {
+    type: Number,
+    required: true,
+  },
   orgId: { type: Number, required: true },
   name: {
     type: String,

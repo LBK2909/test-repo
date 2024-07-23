@@ -7,6 +7,11 @@ let { ShopifyShop, Shop } = require("../../models/shop.model");
 const { Order, OrderSyncJob, Box } = require("../../models");
 const Shopify = require("../../integrations/salesChannels/shopify");
 const { orderSyncQueue } = require("../../workers/queues");
+const https = require("https");
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { emailService } = require("../index.js");
+
 async function authenticateShop(shop) {
   const existingShop = await Shop.findOne({ storeUrl: shop });
   if (existingShop) {
@@ -66,8 +71,9 @@ async function installShopifyApp(shop, code) {
       throw new CustomError(httpStatus.BAD_REQUEST, "Shop already exists");
     } else {
       const newShop = new ShopifyShop({
+        shopId: shopResponse?.data?.shop?.id,
         name: shopResponse?.data?.shop?.name,
-        email: shopResponse?.data?.shop?.email,
+        shopOwnerEmail: shopResponse?.data?.shop?.email,
         storeUrl: shopResponse?.data?.shop?.domain,
         accessToken: ACCESS_TOKEN,
       });
@@ -187,6 +193,7 @@ async function fetchOrders(params) {
           return {
             shop: shopDetails._id,
             orgId: shopDetails.organizationId,
+            storeId: shopDetails.shopId,
             name: order.name,
             customer: order.customer,
             orderId: order.id,
@@ -295,6 +302,205 @@ function checkPaymentStatus(order) {
   // }
 }
 
+async function webhookCustomerRedact(payload) {
+  let { shop_id, customer } = payload;
+  if (!shop_id || !customer) {
+    throw new CustomError(httpStatus.BAD_REQUEST, "Invalid request payload");
+  }
+
+  let orders;
+
+  if (customer.id) {
+    orders = await Order.find({ "customer.id": customer.id, storeId: shop_id }, { customer: 1, status: 1, shippingAddress: 1 });
+  } else if (customerEmail) {
+    orders = await Order.find(
+      { "customer.email": customer.email, storeId: shop_id },
+      { customer: 1, status: 1, shippingAddress: 1 }
+    );
+  } else {
+    orders = [];
+  }
+  for (const order of orders) {
+    order.customer = null;
+    if (order.shippingAddress) {
+      order.shippingAddress.first_name = "s";
+      order.shippingAddress.last_name = "";
+      order.shippingAddress.address1 = "";
+      order.shippingAddress.phone = "";
+      order.shippingAddress.city = "s";
+      order.shippingAddress.zip = "";
+      order.shippingAddress.province = "";
+      order.shippingAddress.country = "";
+      order.shippingAddress.address2 = "";
+      order.shippingAddress.company = "s";
+      order.shippingAddress.latitude = "";
+      order.shippingAddress.longitude = "";
+      order.shippingAddress.name = "";
+      order.shippingAddress.country_code = "";
+      order.shippingAddress.province_code = "";
+    }
+    order.markModified("customer");
+    order.markModified("shippingAddress");
+    await order.save();
+  }
+
+  return "Customer data redacted";
+}
+async function webhooksGetCustomerDataRequest(payload) {
+  console.log("webhooksGetCustomerDataRequest");
+  try {
+    let { shop_id, customer } = payload;
+    if (!shop_id || !customer) {
+      throw new CustomError(httpStatus.BAD_REQUEST, "Invalid request payload");
+    }
+    // Retrieve the requested orders from the database
+    let orders;
+    if (customer.id) {
+      orders = await Order.find(
+        { "customer.id": customer.id, storeId: shop_id },
+        {
+          customer: 1,
+          status: 1,
+          name: 1,
+          shippingAddress: 1,
+        }
+      );
+    } else if (customer.email) {
+      orders = await Order.find(
+        { "customer.email": customer.email, storeId: shop_id },
+        {
+          customer: 1,
+          status: 1,
+          name: 1,
+          shippingAddress: 1,
+        }
+      );
+    } else {
+      orders = [];
+    }
+
+    let shop = await ShopifyShop.findOne({ shopId: shop_id });
+    if (!shop) throw new CustomError(httpStatus.NOT_FOUND, "Shop not found");
+
+    let shopOwnerEmail = shop?.shopOwnerEmail || "";
+    let shopName = shop?.name || "";
+    let customerEmail = customer.email || customer.id;
+    // Upload customer data to S3 and generate a pre-signed URL
+    const presignedUrl = await uploadCustomerDataToS3(customer.id || customer.email, orders);
+    // Send the pre-signed URL to the store owner
+    await emailService.sendCustomerDataEmail(shopOwnerEmail, shopName, customerEmail, presignedUrl);
+    return "Customer data request returned";
+  } catch (error) {
+    console.error("Error handling customers/data_request webhook:", error);
+    throw new CustomError(error || httpStatus.INTERNAL_SERVER_ERROR, "Error handling customers/data_request webhook");
+  }
+}
+async function webhooksShopRedact(payload) {
+  try {
+    const { shop_id } = payload;
+    const removeShop = await Shop.deleteOne({ shopId: shop_id });
+    const removeOrders = await Order.deleteMany({ storeId: shop_id });
+    return "shop data redacted...";
+  } catch (err) {
+    console.error("Error while deleting shop:", err);
+    throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error while deleting shop");
+  }
+}
+// Initialize S3 Client
+const initializeS3Client = () => {
+  return new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_PROG_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_PROG_SECRET_ACCESS_KEY,
+    },
+  });
+};
+
+// Function to create a pre-signed URL for PutObject
+const createPresignedPutUrl = async ({ client, bucket, key }) => {
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ContentType: "application/json",
+  });
+  return await getSignedUrl(client, command, { expiresIn: 10000 });
+};
+
+// Function to create a pre-signed URL for GetObject
+const createPresignedGetUrl = async ({ client, bucket, key }) => {
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+  return await getSignedUrl(client, command, { expiresIn: 10000 });
+};
+
+// Function to upload data using a pre-signed URL
+const put = (url, data) => {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      url,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Length": Buffer.byteLength(data),
+          "Content-Type": "application/json",
+        },
+      },
+      (res) => {
+        let responseBody = "";
+        res.on("data", (chunk) => {
+          responseBody += chunk;
+        });
+        res.on("end", () => {
+          resolve(responseBody);
+        });
+      }
+    );
+    req.on("error", (err) => {
+      reject(err);
+    });
+    req.write(data);
+    req.end();
+  });
+};
+
+// Main function to upload data and generate pre-signed URL for viewing
+const uploadCustomerDataToS3 = async (customer, data) => {
+  const client = initializeS3Client();
+  const REGION = process.env.AWS_REGION;
+  const BUCKET_NAME = process.env.S3_CUSTOMER_DATA_BUCKET_NAME;
+  const timeStamp = new Date().getTime();
+  const KEY = `customer-data/${customer}-${timeStamp}.json`;
+
+  try {
+    // Generate pre-signed URL for PutObject
+    const putUrl = await createPresignedPutUrl({
+      client,
+      bucket: BUCKET_NAME,
+      key: KEY,
+    });
+
+    // Upload JSON data using the pre-signed URL
+    await put(putUrl, JSON.stringify(data));
+
+    // Generate pre-signed URL for GetObject
+    const getUrl = await createPresignedGetUrl({
+      client,
+      bucket: BUCKET_NAME,
+      key: KEY,
+    });
+
+    return getUrl;
+  } catch (err) {
+    console.error("Error:", err);
+    if (err instanceof Error) {
+      console.error("Stack trace:", err.stack);
+    }
+  }
+};
+
 module.exports = {
   authenticateShop,
   installShopifyApp,
@@ -302,4 +508,7 @@ module.exports = {
   parseLinkHeader,
   initiateSyncingProcess,
   fulfillOrdersInShopify,
+  webhooksGetCustomerDataRequest,
+  webhookCustomerRedact,
+  webhooksShopRedact,
 };

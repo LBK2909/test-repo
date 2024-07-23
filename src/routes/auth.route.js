@@ -22,11 +22,11 @@ router.get("/google/callback", passport.authenticate("google", { failureRedirect
 // auth/shopify/callback route with simple callback function
 router.get("/shopify/connect", authController.shopifyAppVerification);
 router.get("/shopify/callback", authController.shopifyAppInstallation);
-router.post("/check-email", authController.checkEmailExists);
-router.post("/send-verification-email", authController.sendVerificationEmail);
-router.post("/verify-otp", authController.verifyOTP);
-router.get("/forgot-password", authController.forgotPassword);
-router.post("/reset-password", authController.resetPassword);
+router.post("/check-email", authValidation.checkEmailExists(), authController.checkEmailExists);
+router.post("/send-verification-email", authValidation.sendVerificationEmail(), authController.sendVerificationEmail);
+router.post("/verify-otp", authValidation.verifyOTP(), authController.verifyOTP);
+router.get("/forgot-password", authValidation.forgotPassword(), authController.forgotPassword);
+router.post("/reset-password", authValidation.resetPassword(), authController.resetPassword);
 // router.post('/register', validate(authValidation.register), authController.register);
 // router.post('/login', validate(authValidation.login), authController.login);
 // router.post('/logout', validate(authValidation.logout), authController.logout);

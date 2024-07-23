@@ -21,7 +21,6 @@ const loginUserWithEmailAndPassword = async (email, password) => {
   if (!user || !(await user.isPasswordMatch(password))) {
     throw new CustomError(httpStatus.UNAUTHORIZED, "Incorrect email or password");
   }
-  console.log(user);
   return user;
 };
 
@@ -60,7 +59,6 @@ const logout = async (refreshToken) => {
 const forgotPassword = async (email) => {
   try {
     const resetLink = await tokenService.generatePasswordResetToken(email);
-    console.log({ resetLink });
     await emailService.sendResetPasswordEmail(email, resetLink);
   } catch (err) {
     // console.log(err);

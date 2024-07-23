@@ -19,6 +19,7 @@ const conditionalVerifyAccess = (req, res, next) => {
     verifyAccess(req, res, next); // Apply the verifyAccess middleware
   }
 };
+
 // Apply this conditional middleware globally if all routes go through one entry point
 router.use(conditionalVerifyAccess);
 router.get("/organizations", organizationController.organizations);

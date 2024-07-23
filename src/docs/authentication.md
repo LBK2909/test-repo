@@ -71,7 +71,3 @@ This document outlines the authentication processes used in our application, inc
 #### if the client is signedin/signedup on the client side
 
 1.Once the shop is installed and stored in the database the client will be redirected to the organization page to connect the shop with the organization. 2. As the client is not signedin/signedup the client will be redirected to the login page. 3. The client will be redirected to the organization page upon successful login. 4. The organization page will have a button to connect the shop with the organization. 5. The client will make a post request to the backend server with the shop name and connect the shop with the organization. 6. The client will be redirected to the organization page upon successful connection.
-
-```
-
-```

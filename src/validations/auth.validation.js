@@ -32,9 +32,29 @@ const registerViaShopify = () => {
     body("queryMail").not().isEmpty().trim().exists(),
   ];
 };
+const forgotPassword = () => {
+  return [query("email").not().isEmpty().trim().exists().withMessage("Email is required")];
+};
+const resetPassword = () => {
+  return [body("password").not().isEmpty().trim().exists(), body("token").not().isEmpty().trim().exists()];
+};
+const verifyOTP = () => {
+  return [body("otp").not().isEmpty().trim().exists(), body("email").not().isEmpty().trim().exists()];
+};
+const sendVerificationEmail = () => {
+  return [body("email").not().isEmpty().trim().exists()];
+};
+const checkEmailExists = () => {
+  return [body("email").not().isEmpty().trim().exists()];
+};
 
 module.exports = {
   register,
   login,
   registerViaShopify,
+  forgotPassword,
+  resetPassword,
+  verifyOTP,
+  sendVerificationEmail,
+  checkEmailExists,
 };

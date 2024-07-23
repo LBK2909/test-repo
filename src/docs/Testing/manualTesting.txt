@@ -53,6 +53,22 @@
     -> update sidebar,top bar when updating the user details
 
 
+4.Shopping cart Integration:
+ 
+  -> Installation flow from app  to register page 
+  -> Installation flow  from app to login page
+  -> installation flow from app to authenticated session page
+  -> Installation flow - install app in shopify ,but connect organization later
+  -> installation flow - modify the redirection url params return from the server
+  -> install multiple stores in the same organization
+  -> install multiple stores in the different organization
 
 
+
+5.Shopify Order sync:
+-> sync orders
+-> Fetch the orders from shopify api with the recent order number
+-> check polling method from the server
+-> check server response from the client side
+-> install multiple stores in the same organization
 

@@ -455,7 +455,16 @@ const createShippingLabel = async (order) => {
 </style>
 `;
   try {
-    const browser = await puppeteer.launch();
+    let browser;
+    if (process.env.NODE_ENV === "production") {
+      browser = await puppeteer.launch({
+        executablePath: "/usr/bin/chromium-browser", // Path to the installed Chromium binary
+        headless: true, // Runs Chromium in headless mode (without a GUI)
+        args: ["--no-sandbox", "--disable-setuid-sandbox"], // Additional arguments to run Chromium in a server environment
+      });
+    } else {
+      browser = await puppeteer.launch();
+    }
     const page = await browser.newPage();
     const shippingData = await createStructuredObj(order);
     const generatedHtml = await generateShippingLabelContent(shippingData, page);

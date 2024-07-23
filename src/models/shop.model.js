@@ -11,6 +11,14 @@ const shopSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    shopId: {
+      type: Number,
+      default: null,
+    },
+    shopOwnerEmail: {
+      type: String,
+      default: null,
+    },
     // Add other common fields here
   },
   {

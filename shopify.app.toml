@@ -1,0 +1,29 @@
+name = "cobay-shipping"
+client_id = "44fd4dcfcf3ef4106c195d753fddec5d"
+application_url = "api.cobay.com/"
+embedded = false
+
+[access_scopes]
+scopes = "read_products,read_orders,read_fulfillments,write_fulfillments,read_assigned_fulfillment_orders,write_assigned_fulfillment_orders,read_merchant_managed_fulfillment_orders,write_merchant_managed_fulfillment_orders"
+
+[access.admin]
+direct_api_mode = "online"
+
+[auth]
+redirect_urls = [
+  "https://api.cobay.com/api/auth/callback",
+  "https://api.cobay.com/api/auth/oauth/callback",
+]
+
+[webhooks]
+api_version = "2024-07"
+
+[[webhooks.subscriptions]]
+topics = [ "app/uninstalled" ]
+compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
+uri = "/webhooks"
+
+
+[pos]
+embedded = false
+

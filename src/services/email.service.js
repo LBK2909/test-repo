@@ -243,6 +243,108 @@ const sendResetPasswordEmail = async (to, resetLink) => {
   }
 };
 
+const sendCustomerDataEmail = async (to, storeName, customerEmail, presignedUrl) => {
+  const companyLogo = await getCompanyLogo();
+  const emailHtml = generateEmailTemplate(storeName, customerEmail, presignedUrl, companyLogo);
+  const params = {
+    Source: process.env.SES_SENDER_EMAIL,
+    Destination: {
+      ToAddresses: [to],
+    },
+    Message: {
+      Subject: {
+        Data: "[ADMIN] User Data Request",
+      },
+      Body: {
+        Html: {
+          Data: emailHtml.toString(),
+        },
+      },
+    },
+  };
+
+  try {
+    await ses.sendEmail(params).promise();
+    return true;
+  } catch (error) {
+    console.error(`Failed to send customer data email to ${to}:`, error);
+    return false;
+  }
+};
+const generateEmailTemplate = (storeName, customerEmail, presignedUrl, companyLogo) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Customer Data Request</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f9f9f9;
+                margin: 0;
+                padding: 0;
+                color: #333;
+            }
+            .container {
+                max-width: 600px;
+                margin: 20px auto;
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+            .header {
+                text-align: center;
+            }
+            .header img {
+                width: 100px;
+            }
+            .content {
+                margin: 20px 0;
+            }
+            .content p {
+                font-size: 16px;
+                line-height: 1.6;
+            }
+            .content a {
+                display: inline-block;
+                margin-top: 10px;
+                padding: 5px 10px;
+                color: #007bff;
+                text-decoration: none;
+                border-radius: 5px;
+                font-size:16px;
+            }
+            .footer {
+                margin-top: 20px;
+                text-align: center;
+                font-size: 12px;
+                color: #777;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <img src="${companyLogo}"  alt="Company Logo">
+            </div>
+            <div class="content">
+                <p>Hey ${storeName},</p>
+                <p>You recently requested existing user data about <a href="mailto:${customerEmail}">${customerEmail}</a> in Cobay database.</p>
+                <p>To view the requested data, please refer to the link below.</p>
+                <a href="${presignedUrl}">View User Data</a>
+                <p>Note that this link will expire 48 hours from the time your request was processed.</p>
+                <p>Regards,<br>The Cobay Team</p>
+            </div>
+         
+        </div>
+    </body>
+    </html>
+  `;
+};
+
 async function getCompanyLogo() {
   const assetsDir = path.join(process.cwd(), "src/assets");
   const BrandLogoImagePath = path.join(assetsDir, "cobayLogo.png");
@@ -252,4 +354,5 @@ async function getCompanyLogo() {
 module.exports = {
   sendVerificationEmail,
   sendResetPasswordEmail,
+  sendCustomerDataEmail,
 };
