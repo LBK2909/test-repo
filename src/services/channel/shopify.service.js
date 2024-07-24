@@ -275,8 +275,24 @@ async function fulfillOrdersInShopify(ordersList) {
     let orders = await Order.find({ _id: { $in: ordersList }, status: { $eq: "booked" } })
       .populate("shop")
       .select("courierDetails orderId");
+
+    let updatedOrders = [];
+
+    for (let order of orders) {
+      let orderObj = order.toObject();
+      if (orderObj.shop) {
+        let shop = await Shop.findById(orderObj?.shop?._id);
+        if (shop) {
+          orderObj.shop.accessToken = shop.accessToken; // Store the accessToken in the shop key
+          console.log(orderObj.shop);
+        } else {
+          console.warn(`Shop not found for order: ${orderObj._id}`);
+        }
+      }
+      updatedOrders.push(orderObj);
+    }
     // console.log("orders", orders);
-    const fulfillmentDetails = await shopify.fetchFulfillmentIdFromShopify(orders);
+    const fulfillmentDetails = await shopify.fetchFulfillmentIdFromShopify(updatedOrders);
     const fulfilledOrders = await shopify.orderFulfillmentShopifyAPI(fulfillmentDetails);
     return fulfilledOrders;
   } catch (error) {

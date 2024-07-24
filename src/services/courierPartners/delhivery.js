@@ -242,7 +242,7 @@ const generateShippingLabelContent = async (data, page) => {
 
     const footer = `
     <div class="footer note" >
-      All disputes are subject to Tamil Nadu jurisdiction only. Goods once sold will only be taken back or exchanged as per the store's exchange/return policy.
+      Goods once sold will only be taken back or exchanged as per the store's exchange/return policy.
       <div style='display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end'>
       <img src="${footerImage}" width='50' height='50' alt="log Logo">
       </div>

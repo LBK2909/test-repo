@@ -1,5 +1,5 @@
 name = "cobay-shipping"
-client_id = "44fd4dcfcf3ef4106c195d753fddec5d"
+client_id = "72e963132514cab7a4608299e151a019"
 application_url = "api.cobay.com/"
 embedded = false
 
@@ -16,7 +16,7 @@ redirect_urls = [
 ]
 
 [webhooks]
-api_version = "2024-07"
+api_version = "2024-04"
 
 [[webhooks.subscriptions]]
 topics = [ "app/uninstalled" ]
@@ -26,4 +26,5 @@ uri = "/webhooks"
 
 [pos]
 embedded = false
+
 

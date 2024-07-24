@@ -69,7 +69,7 @@ class Shopify {
         chunkResults.forEach((result, index) => {
           // let obj = JSON.parse(JSON.stringify(result));
           if (result.status === "fulfilled") {
-            let object = chunk[index].toObject();
+            let object = chunk[index];
             if (object.fulfillmentId === undefined) {
               object.fulfillmentId = "";
             }
@@ -83,6 +83,7 @@ class Shopify {
         results.push(...chunk);
       } catch (error) {
         console.error("Error while fetching chunk of orders in fetchFulfillmentIdFromShopify:");
+        console.log(error);
       }
 
       if (i + chunkSize < orders.length) {
@@ -130,7 +131,6 @@ class Shopify {
 
         let shopUrl = order?.shop?.storeUrl;
         let accessToken = order?.shop?.accessToken;
-
         // let courier=order.shop?.courier;
         let API_URL = `https://${shopUrl}/admin/api/2024-04/fulfillments.json`;
 
