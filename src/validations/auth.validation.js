@@ -1,4 +1,4 @@
-const { body, validationResult } = require("express-validator");
+const { body, validationResult, query } = require("express-validator");
 
 const register = () => {
   return [
