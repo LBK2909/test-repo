@@ -1,6 +1,6 @@
 name = "cobay-shipping"
 client_id = "72e963132514cab7a4608299e151a019"
-application_url = "api.cobay.com/"
+application_url = "https://api.cobay.com/"
 embedded = false
 
 [access_scopes]
@@ -11,8 +11,7 @@ direct_api_mode = "online"
 
 [auth]
 redirect_urls = [
-  "https://api.cobay.com/api/auth/callback",
-  "https://api.cobay.com/api/auth/oauth/callback",
+ "https://api.cobay.com/auth/shopify/callback"
 ]
 
 [webhooks]
@@ -21,10 +20,9 @@ api_version = "2024-04"
 [[webhooks.subscriptions]]
 topics = [ "app/uninstalled" ]
 compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
-uri = "/webhooks"
+uri = "https://api.cobay.com/webhooks"
 
 
 [pos]
 embedded = false
-
 

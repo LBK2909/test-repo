@@ -284,7 +284,6 @@ async function fulfillOrdersInShopify(ordersList) {
         let shop = await Shop.findById(orderObj?.shop?._id);
         if (shop) {
           orderObj.shop.accessToken = shop.accessToken; // Store the accessToken in the shop key
-          console.log(orderObj.shop);
         } else {
           console.warn(`Shop not found for order: ${orderObj._id}`);
         }

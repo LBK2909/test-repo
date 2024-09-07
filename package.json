@@ -45,6 +45,8 @@
     "pdfkit": "^0.14.0",
     "puppeteer": "^22.10.0",
     "qrcode": "^1.5.3",
+    "razorpay": "^2.9.4",
+    "stripe": "^16.9.0",
     "validator": "^13.11.0",
     "winston": "^3.11.0"
   },

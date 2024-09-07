@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+global.__basedir = __dirname;
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -14,17 +15,9 @@ const { errorHandler, errorConverter } = require("./middlewares/error.middleware
 var session = require("express-session");
 var passport = require("passport");
 require("./config/winston_logger");
-let { delhiveryController } = require("./controllers/shipping/couriersPartners");
-let shippingController = require("./controllers/shipping.controller");
-let shopifyController = require("./controllers/salesChannels/shopify.controller");
-// let { delhiveryController } = require("./controller/courierPartners");
 require("./config/logger");
 const app = express();
 connectDB();
-// Increase payload limit
-app.use(bodyParser.json({ limit: "10mb" }));
-app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
-// Middleware
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -41,18 +34,24 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  if (req.originalUrl.includes("/webhooks")) {
+    next();
+  } else {
+    // Apply URL-encoded body parsing for all other routes
+    bodyParser.urlencoded({ limit: "10mb", extended: true })(req, res, next);
+  }
+});
 app.use(cookieParser());
-// app.use(cors(corsOptions));
 app.use(morgan("dev"));
-app.use(bodyParser.json());
 // v1 api routes
 app.use("/v1", routes);
 app.use("/auth", authRoutes);
 app.use("/webhooks", shopifyWebhookRoutes);
-// Basic Route
-app.get("/", (req, res) => {
-  res.send("");
-});
+// // Basic Route
+// app.get("/", (req, res) => {
+//   res.send("");
+// });
 app.get("/error", (req, res, next) => {
   throw new CustomError(404, "This is a custom error message");
 });

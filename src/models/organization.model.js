@@ -25,85 +25,13 @@ const organizationSchema = new Schema(
     userId: { type: Number, default: null },
     configurationSetup: { type: Boolean, default: false },
     billingAddress: addressSchema,
+    currency: { type: String, default: null },
     companyLogo: { type: String, default: null },
     website: {
       type: String,
       required: false,
     },
     isDefault: { type: Boolean, default: false },
-    // contactInformation: {
-    //   email: { type: String, required: true },
-    //   phone: String,
-    //   address: {
-    //     street: String,
-    //     city: String,
-    //     state: String,
-    //     zip: String,
-    //     country: String,
-    //   },
-    // },
-    //   organizationType: { type: String, required: true, enum: ["corporation", "partnership", "sole proprietorship"] },
-    // company: {
-    //   name: {
-    //     type: String,
-    //     required: true,
-    //   },
-    //   website: String,
-    //   industry: String,
-    //   size: String,
-    //   description: String,
-    //   logo: String,
-    // },
-    //   shippingPreferences: {
-    //     preferredCarriers: [String],
-    //     shippingMethods: [String],
-    //     packagingPreferences: [String],
-    //   },
-    //   billingInformation: {
-    //     billingAddress: {
-    //       street: String,
-    //       city: String,
-    //       state: String,
-    //       zip: String,
-    //       country: String,
-    //     },
-    //     paymentMethod: String,
-    //     paymentTerms: String,
-    //   },
-    //   accessControlList: [
-    //     {
-    //       userId: Schema.Types.ObjectId,
-    //       permissions: [String],
-    //     },
-    //   ],
-    //   integrationSettings: {
-    //     inventorySystem: {
-    //       apiKey: String,
-    //       endpoint: String,
-    //     },
-    //     ecommercePlatform: {
-    //       apiKey: String,
-    //       endpoint: String,
-    //     },
-    //     accountingSoftware: {
-    //       apiKey: String,
-    //       endpoint: String,
-    //     },
-    //   },
-    //   customFields: Schema.Types.Mixed, // Flexible field for organization-specific data
-    //   status: { type: String, required: true, enum: ["active", "inactive", "pending"] },
-    //   createdAt: { type: Date, default: Date.now },
-    //   updatedAt: { type: Date, default: Date.now },
-    //   securitySettings: {
-    //     twoFactorAuthentication: Boolean,
-    //     passwordPolicy: String,
-    //     sessionTimeout: Number,
-    //   },
-    //   subscriptionDetails: {
-    //     planType: String,
-    //     renewalDate: Date,
-    //     featureAccess: [String],
-    //   },
   },
   {
     timestamps: true,

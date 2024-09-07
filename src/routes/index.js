@@ -7,6 +7,9 @@ const orderRoute = require("./order.route");
 const userRoute = require("./user.route");
 const courierRoute = require("./courier.route");
 const configRoute = require("./config.route");
+const billingRoute = require("./billing/index.route");
+const razorPayRoute = require("./billing/razorpay.route");
+const stripeRoute = require("./billing/stripe.route");
 const router = express.Router();
 
 const defaultRoutes = [
@@ -37,6 +40,18 @@ const defaultRoutes = [
   {
     path: "/config",
     route: configRoute,
+  },
+  {
+    path: "/billing",
+    route: billingRoute,
+  },
+  {
+    path: "/billing/razorpay",
+    route: razorPayRoute,
+  },
+  {
+    path: "/billing/stripe",
+    route: stripeRoute,
   },
 ];
 

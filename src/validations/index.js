@@ -14,3 +14,4 @@ module.exports = {
 
 module.exports.authValidation = require("./auth.validation");
 module.exports.organizationValidation = require("./organization.validation");
+module.exports.billingValidation = require("./billing.validation");
