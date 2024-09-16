@@ -1,9 +1,7 @@
 const Stripe = require("stripe");
 const catchAsync = require(__basedir + "/utils/catchAsync");
 const httpStatus = require("http-status");
-const stripe = Stripe(
-  "sk_test_51PtOpXP9ujEXTTa21yqUHfEbzV7wPdF5bug7W8HtoFWcbwv1dRQ0OKkd75PZ2H0aIPwW3M69jcr0HLkOjn37phfS00blFULL9u"
-);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const { stripeOrder } = require(__basedir + "/models");
 const CustomError = require(__basedir + "/utils/customError");
 const billingController = require("../index");
@@ -103,7 +101,7 @@ const handlePaymentMethodAttached = (paymentMethod) => {
 
 exports.handleWebhookEvent = async (event) => {
   console.log("handleWebhookEvent method...:====");
-  // console.log(event);
+  console.log(event);
   let eventObj = event?.data?.object || null;
   let eventType = event?.type || null;
   if (!eventType) {
@@ -124,7 +122,7 @@ exports.handleWebhookEvent = async (event) => {
 };
 
 exports.handleStripeWebhook = async (req, res) => {
-  const endpointSecret = "whsec_ocZBkt8mEhYpQh8xWLswASu2DBTvYdly"; // Replace with your actual endpoint secret
+  const endpointSecret = process.env.STRIPE_WEBHOOK_ENDPOINT_KEY; // Replace with your actual endpoint secret
   const sig = req.headers["stripe-signature"];
   let event;
 

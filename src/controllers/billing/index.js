@@ -99,7 +99,6 @@ exports.createOrder = catchAsync(async (req, res) => {
 
   // Step 2: Query the Plan collection with plan_id
   const plan = await Plan.findById(planId);
-  console.log({ plan });
   if (!plan) {
     return res.status(404).json({
       success: false,
@@ -447,7 +446,6 @@ const generateInvoicePDF = async (invoiceDetails) => {
   let { invoice } = invoiceDetails;
   try {
     let html = await generateTemplate(invoiceDetails);
-    console.log(html);
     let timestamp = new Date().getTime();
     let id = invoice._id;
     var invoiceFilePath = `invoice_${id}_${timestamp}.pdf`;
