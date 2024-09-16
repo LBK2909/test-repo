@@ -3,6 +3,8 @@ const pick = require("../utils/pick");
 const ApiError = require("../utils/ApiError");
 const catchAsync = require("../utils/catchAsync");
 const { userService } = require("../services");
+const organizationService = require("../services/organization.service");
+
 const { Organization, User } = require("../models");
 
 const createUser = catchAsync(async (req, res) => {
@@ -29,10 +31,12 @@ const getUser = catchAsync(async (req, res) => {
       const organizationDetails = await Organization.findOne({ _id: org.organizationId }).select(
         " -updatedAt -__v -configurationSetup"
       );
+
       let obj = {
         ...org,
         ...organizationDetails.toObject(),
       };
+      //get susbcription details
       return obj;
     })
   );

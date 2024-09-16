@@ -16,6 +16,7 @@ var session = require("express-session");
 var passport = require("passport");
 require("./config/winston_logger");
 require("./config/logger");
+const { startCrons } = require(__basedir + "/crons/index");
 const app = express();
 connectDB();
 app.use(
@@ -35,7 +36,19 @@ app.use(
 );
 
 app.use((req, res, next) => {
+  console.log(req.originalUrl);
   if (req.originalUrl.includes("/webhooks")) {
+    // Skip JSON body parsing for routes that contain '/webhooks'
+    next();
+  } else {
+    // Apply JSON body parsing for all other routes
+    bodyParser.json({ limit: "10mb" })(req, res, next);
+  }
+});
+
+app.use((req, res, next) => {
+  if (req.originalUrl.includes("/webhooks")) {
+    // Skip URL-encoded body parsing for Stripe webhook route
     next();
   } else {
     // Apply URL-encoded body parsing for all other routes
@@ -43,15 +56,16 @@ app.use((req, res, next) => {
   }
 });
 app.use(cookieParser());
+// app.use(cors(corsOptions));
 app.use(morgan("dev"));
 // v1 api routes
 app.use("/v1", routes);
 app.use("/auth", authRoutes);
 app.use("/webhooks", shopifyWebhookRoutes);
-// // Basic Route
-// app.get("/", (req, res) => {
-//   res.send("");
-// });
+// Basic Route
+app.get("/", (req, res) => {
+  res.sendStatus(204);
+});
 app.get("/error", (req, res, next) => {
   throw new CustomError(404, "This is a custom error message");
 });
@@ -61,4 +75,7 @@ app.use(errorConverter);
 // handle error
 app.use(errorHandler);
 
+setTimeout(() => {
+  startCrons();
+}, 10000);
 module.exports = app;

@@ -1,17 +1,17 @@
 const mongoose = require("mongoose");
 
 const transactionSchema = new mongoose.Schema({
-  user_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // Reference to the Users collection
+  orgId: {
+    type: Number,
+    ref: "Organization", // Reference to the Users collection
     required: true,
   },
-  subscription_id: {
+  subscriptionId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Subscription", // Reference to the Subscriptions collection
     required: false, // Not required if the transaction is not linked to a subscription
   },
-  amount: {
+  price: {
     type: mongoose.Types.Decimal128, // The monetary value of the transaction
     required: true,
   },
@@ -29,11 +29,15 @@ const transactionSchema = new mongoose.Schema({
     enum: ["completed", "pending", "failed"],
     default: "pending",
   },
-  payment_method_id: {
+  paymentId: {
     type: String, // Reference to the payment method used (e.g., from Stripe)
     required: true,
   },
-  transaction_date: {
+  paymentGateway: {
+    type: String,
+    required: true,
+  },
+  transactionDate: {
     type: Date, // Timestamp when the transaction was processed
     default: Date.now,
   },

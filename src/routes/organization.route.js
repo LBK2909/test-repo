@@ -37,6 +37,10 @@ router.get("/get-installed-shops/:organizationId", auth.verifyToken, organizatio
 router.post("/setup/select-organization", organizationController.selectOrganization);
 router.post("/add-new-organization", organizationController.addNewOrganization);
 router.get("/default-organization/:orgId", organizationController.defaultOrganization);
+// route get for get-organization-invoices
+router.get("/get-organization-invoices", organizationController.getOrganizationInvoices);
+///v1/organization/get-organization-subscription
+router.get("/get-organization-subscription", organizationController.getOrganizationSubscription);
 // router.put("/update-organization-courier/:id", organizationController.updateOrganizationCourier);
 // router.post("/select-organization", (req, res) => {
 //   const { organizationId } = req.body;

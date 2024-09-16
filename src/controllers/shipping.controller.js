@@ -4,7 +4,7 @@ const { shippingService, shopifyService } = require("../services");
 const { Job, Order, Courier, Organization, OrganizationCourier } = require("../models");
 const CustomError = require("../utils/customError");
 const httpStatus = require("http-status");
-const { updateOrderStatus } = require("../utils/db.js");
+const { updateOrderStatus, updateOrderCount } = require("../utils/db.js");
 const courierPartners = {
   delhivery: require("../services/courierPartners"),
 };
@@ -26,6 +26,19 @@ exports.shipmentBooking = catchAsync(async (req, res) => {
     });
 
     let organization = await Organization.findOne({ _id: orgId });
+
+    let orderCount = organization.orderCount || 0;
+
+    if (orderCount <= ordersList.length) {
+      throw new CustomError(
+        httpStatus.BAD_REQUEST,
+        "You have reached the maximum order limit for your subscription plan. Please upgrade your plan to continue."
+      );
+    } else {
+      let len = ordersList.length;
+      const updatedOrg = await updateOrderCount(orgId, -len);
+    }
+
     ordersList = ordersList.map((order) => {
       const plainOrder = order.toObject(); // Convert Mongoose document to plain JavaScript object
       return {
@@ -34,12 +47,6 @@ exports.shipmentBooking = catchAsync(async (req, res) => {
         organization,
       };
     });
-
-    // // update all the orders to processing
-    // if (ordersList.length > 0) {
-    //   let orderIdsToUpdate = ordersList.map((order) => order._id);
-    //   await Order.updateMany({ _id: { $in: orderIdsToUpdate } }, { status: "processing" });
-    // }
 
     let totalOrders = ordersList.length;
     if (totalOrders > 1) {
@@ -73,6 +80,7 @@ exports.shipmentBooking = catchAsync(async (req, res) => {
           "courierDetails.bookingInfo": "Courier partner not found",
           "courierDetails.bookingStatus": "failed",
         });
+        await updateOrderCount(orgId, 1);
         throw new CustomError(httpStatus.BAD_REQUEST, "Courier partner not found");
       }
       //convert the first letter to lowercase
@@ -85,6 +93,7 @@ exports.shipmentBooking = catchAsync(async (req, res) => {
           res.status(200).send(result);
         } catch (err) {
           await updateOrderStatus(order._id, { status: "pending" });
+          await updateOrderCount(orgId, 1);
           console.log("error in shipmentBooking controller...", err);
           throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, err);
         }

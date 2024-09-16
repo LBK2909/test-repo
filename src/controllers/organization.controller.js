@@ -58,6 +58,14 @@ exports.connectToOrganization = catchAsync(async (req, res) => {
       throw new CustomError(httpStatus.FORBIDDEN, "User does not have permission to update store");
     }
 
+    let organization = await Organization.findById(organizationId);
+    let shopListLength = await Shop.find({ organizationId: organizationId }).countDocuments();
+    let channelLimit = organization.channelCount;
+    if (shopListLength >= channelLimit) {
+      console.log("channel limit is  reached");
+      throw new CustomError(httpStatus.BAD_REQUEST, "Channel limit reached");
+    }
+
     console.log("shop name==", shop);
 
     //get the organizationId & shop from the request
@@ -189,7 +197,18 @@ exports.defaultOrganization = catchAsync(async (req, res) => {
 
   res.status(httpStatus.OK).send(organization);
 });
+exports.getOrganizationInvoices = catchAsync(async (req, res) => {
+  const organizationId = req.cookies["orgId"];
+  const invoices = await organizationService.getOrganizationInvoices(organizationId);
+  res.status(httpStatus.OK).send(invoices);
+});
 
+//getOrganizationSubscription
+exports.getOrganizationSubscription = catchAsync(async (req, res) => {
+  const organizationId = req.cookies["orgId"];
+  const subscription = await organizationService.getOrganizationSubscription(organizationId);
+  res.status(httpStatus.OK).send(subscription);
+});
 // exports.getOrganizationMembers = catchAsync(async (req, res) => {
 //   const userId = req.cookies["userId"];
 //   const organizationId = req.cookies["orgId"];
@@ -230,6 +249,16 @@ exports.updateOrganization = catchAsync(async (req, res) => {
   const organizationId = req.cookies["orgId"];
   const update = req.body;
 
+  //check if the udpatedData contains billingAddress.country ,
+  //if yes then get query the organization and get the country and update the billingAddress.country
+
+  if (update.billingAddress && update.billingAddress.country) {
+    const organization = await Organization.findById(organizationId);
+    if (!organization) {
+      return null;
+    }
+    update.billingAddress.country = organization.billingAddress.country;
+  }
   const organization = await Organization.findByIdAndUpdate(organizationId, update, { new: true });
   res.status(httpStatus.OK).send(organization);
 });

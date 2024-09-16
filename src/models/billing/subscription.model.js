@@ -2,25 +2,25 @@ const mongoose = require("mongoose");
 
 const subscriptionSchema = new mongoose.Schema(
   {
-    user_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to the Users collection
+    orgId: {
+      type: Number,
+      ref: "Organization", // Reference to the Users collection
       required: true,
     },
-    plan_id: {
+    planId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Plan", // Reference to the Plans collection
       required: true,
     },
-    start_date: {
+    startDate: {
       type: Date, // Start date of the subscription
       required: true,
     },
-    end_date: {
+    endDate: {
       type: Date, // End date or next billing date of the subscription
       required: true,
     },
-    billing_cycle: {
+    billingCycle: {
       type: String, // "monthly", "annual", etc.
       enum: ["monthly", "annual"],
       required: true,
@@ -30,11 +30,11 @@ const subscriptionSchema = new mongoose.Schema(
       enum: ["active", "canceled", "expired"],
       default: "active",
     },
-    auto_renew: {
+    autoRenew: {
       type: Boolean, // Indicates if the subscription will auto-renew
-      default: true,
+      default: false,
     },
-    order_count: {
+    orderCount: {
       type: Number, // Number of orders remaining for the current cycle
       required: true,
       default: 0,

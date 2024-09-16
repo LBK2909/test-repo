@@ -1,6 +1,7 @@
 const catchAsync = require("../../utils/catchAsync.js");
 const ShopifyService = require("../../services/channel/shopify.service.js");
 const { OrderSyncJob } = require("../../models");
+const httpStatus = require("http-status");
 
 exports.syncOrders = catchAsync(async (req, res) => {
   try {
@@ -94,6 +95,21 @@ exports.webhooksShopRedact = catchAsync(async (req, res) => {
     // };
     let response = await ShopifyService.webhooksShopRedact(payload);
     res.status(200).json("customer data request returned");
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(error);
+  }
+});
+exports.uninstallShop = catchAsync(async (req, res) => {
+  try {
+    let shopId = req.params.shopId || null;
+
+    if (!shopId) {
+      res.status(500).json({ error: "shop id is required" });
+    }
+    let orgId = req.cookies["orgId"];
+    let response = await ShopifyService.uninstallShop(shopId, orgId);
+    res.status(200).json(response);
   } catch (error) {
     console.log(error);
     res.status(500).json(error);

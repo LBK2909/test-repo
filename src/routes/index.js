@@ -10,6 +10,7 @@ const configRoute = require("./config.route");
 const billingRoute = require("./billing/index.route");
 const razorPayRoute = require("./billing/razorpay.route");
 const stripeRoute = require("./billing/stripe.route");
+const salesChannelRoute = require("./salesChannel.route");
 const router = express.Router();
 
 const defaultRoutes = [
@@ -52,6 +53,10 @@ const defaultRoutes = [
   {
     path: "/billing/stripe",
     route: stripeRoute,
+  },
+  {
+    path: "/sales-channel",
+    route: salesChannelRoute,
   },
 ];
 

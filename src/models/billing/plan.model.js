@@ -14,7 +14,12 @@ const PlanSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    order_count: {
+    additionalOrderPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    orderCount: {
       type: Number,
       required: true,
       default: 0,
@@ -25,7 +30,8 @@ const PlanSchema = new mongoose.Schema(
       default: "USD",
       enum: ["USD", "INR"],
     },
-    billing_cycle: {
+
+    billingCycle: {
       type: String,
       enum: ["monthly", "annual"],
       required: true,

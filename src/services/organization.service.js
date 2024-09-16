@@ -1,6 +1,6 @@
 const httpStatus = require("http-status");
 const catchAsync = require("../utils/catchAsync");
-const { User, Organization, Courier, OrganizationCourier } = require("../models");
+const { User, Organization, Courier, OrganizationCourier, Invoice, Subscription } = require("../models");
 const { Shop, ShopifyShop } = require("../models/shop.model");
 const CustomError = require("../utils/customError");
 
@@ -61,4 +61,15 @@ exports.getOrganizations = async (userId) => {
     })
   );
   return organizations;
+};
+exports.getOrganizationInvoices = async (orgId) => {
+  const invoices = await Invoice.find({ orgId });
+  return invoices;
+};
+
+exports.getOrganizationSubscription = async (orgId) => {
+  const organization = await Organization.findById(orgId);
+  organization.activeSubscription;
+  let subscription = await Subscription.findById(organization.activeSubscription).populate("planId");
+  return subscription;
 };

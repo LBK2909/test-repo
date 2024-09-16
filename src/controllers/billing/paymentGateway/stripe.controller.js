@@ -6,6 +6,8 @@ const stripe = Stripe(
 );
 const { stripeOrder } = require(__basedir + "/models");
 const CustomError = require(__basedir + "/utils/customError");
+const billingController = require("../index");
+// const { subscribe } = require(__basedir + "/controllers/billing/index");
 
 // Create a new order
 exports.createOrderStripe = async (plan) => {
@@ -13,21 +15,23 @@ exports.createOrderStripe = async (plan) => {
     const paymentIntent = await stripe.paymentIntents.create(plan);
     // Save essential payment intent details to MongoDB
     const paymentIntentData = {
-      id: paymentIntent.id,
+      _id: paymentIntent.id,
       amount: paymentIntent.amount,
       currency: paymentIntent.currency,
       status: paymentIntent.status,
-      client_secret: paymentIntent.client_secret,
+      clientSecret: paymentIntent.client_secret,
       livemode: paymentIntent.livemode,
       receipt_email: paymentIntent.receipt_email,
       description: paymentIntent.description,
+      metadata: paymentIntent.metadata,
     };
 
-    await stripeOrder.create(paymentIntentData);
+    let order = await stripeOrder.create(paymentIntentData);
     if (!paymentIntent.client_secret) {
       throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Payment Intent creation failed");
     }
-    return paymentIntent?.client_secret || null;
+    return order;
+    // paymentIntent?.client_secret || null;
   } catch (error) {
     console.error("Error creating order:", error.message);
     throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
@@ -52,14 +56,11 @@ exports.getPaymentIntentDetails = catchAsync(async (req, res) => {
       livemode: paymentIntent.livemode,
       receipt_email: paymentIntent.receipt_email,
       description: paymentIntent.description,
+      metadata: paymentIntent.metadata,
     };
 
     // Update the record in MongoDB using the paymentIntent ID
-    const updatedPaymentIntent = await stripeOrder.findOneAndUpdate(
-      { id: paymentIntentId },
-      updatedPaymentIntentData,
-      { new: true, upsert: true } // 'new: true' returns the updated document; 'upsert: true' creates the document if it doesn't exist
-    );
+    let updated = await stripeOrder.findByIdAndUpdate(paymentIntentId, updatedPaymentIntentData, { new: true, upsert: true });
 
     // Send the payment intent details as a response
     res.status(200).send(paymentIntent);
@@ -75,10 +76,22 @@ exports.getPaymentIntentDetails = catchAsync(async (req, res) => {
     });
   }
 });
-
-const handlePaymentIntentSucceeded = (paymentIntent) => {
-  // Logic to handle successful payment intent
-  console.log("PaymentIntent succeeded:", paymentIntent);
+const handlePaymentIntentSucceeded = async (paymentIntent) => {
+  try {
+    // Logic to handle successful payment intent
+    // console.log("PaymentIntent succeeded:", paymentIntent);
+    const obj = await stripeOrder.findOne({ _id: paymentIntent.id });
+    const paymentObj = {
+      ...obj.toObject(),
+      paymentId: paymentIntent.id,
+      paymentGateway: "stripe",
+    };
+    // Call the billingController to handle the success order
+    billingController.handleSuccessOrder(paymentObj);
+  } catch (error) {
+    console.error("Error handling payment intent:", error.message);
+    throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+  }
   // Simple operation: Add the payment intent ID to the store
 };
 
@@ -87,13 +100,19 @@ const handlePaymentMethodAttached = (paymentMethod) => {
   console.log("PaymentMethod attached:", paymentMethod);
   // Simple operation: Add the payment method ID to the store
 };
-1;
+
 exports.handleWebhookEvent = async (event) => {
   console.log("handleWebhookEvent method...:====");
-  console.log(event);
+  // console.log(event);
+  let eventObj = event?.data?.object || null;
+  let eventType = event?.type || null;
+  if (!eventType) {
+    console.log("Invalid event type");
+    return;
+  }
   switch (event.type) {
     case "payment_intent.succeeded":
-      handlePaymentIntentSucceeded(event.data.object);
+      handlePaymentIntentSucceeded(event?.data?.object);
       break;
     case "payment_method.attached":
       handlePaymentMethodAttached(event.data.object);
@@ -112,6 +131,7 @@ exports.handleStripeWebhook = async (req, res) => {
   try {
     // Verify the webhook signature and extract the event
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log(event.data);
   } catch (err) {
     // If verification fails, return a 400 error
     console.error(`Webhook signature verification failed: ${err.message}`);
@@ -123,4 +143,8 @@ exports.handleStripeWebhook = async (req, res) => {
 
   // Return a response to acknowledge receipt of the event
   return res.json({ received: true });
+};
+
+exports.testSubscribe = async (red) => {
+  billingController.subscribe();
 };

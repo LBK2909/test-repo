@@ -1,7 +1,8 @@
-const { updateJobStatus, updateOrderStatus } = require("../../utils/db");
+const { updateJobStatus, updateOrderStatus, updateOrderCount } = require(__basedir + "/utils/db");
 const courierPartners = {
-  delhivery: require("../../services/courierPartners/index.js"),
+  delhivery: require(__basedir + "/services/courierPartners/index.js"),
 };
+
 const shippingJobHandler = async (job) => {
   try {
     console.log("Processing shipping job:", job.id);
@@ -19,7 +20,11 @@ const shippingJobHandler = async (job) => {
           "courierDetails.bookingInfo": "Courier partner not found",
           "courierDetails.bookingStatus": "failed",
         });
+        await updateJobStatus(jobId, "failedOrders");
+        await updateOrderCount(order.orgId, 1);
+        continue; // Move to the next order
       }
+
       //convert the first letter to lowercase
       const partnerModule = courierPartners?.[partner]?.[partner];
       if (partnerModule && typeof partnerModule.createShipment === "function") {
@@ -30,7 +35,8 @@ const shippingJobHandler = async (job) => {
           await updateOrderStatus(order._id, { status: "pending" });
         }
       } else {
-        updateJobStatus(jobId, "failedOrders");
+        await updateJobStatus(jobId, "failedOrders");
+        await updateOrderCount(order.orgId, 1);
         console.error(`Invalid courier partner or createShipment method not found: ${partner}`);
       }
     }

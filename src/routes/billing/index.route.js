@@ -17,8 +17,9 @@ router.post("/plan", billingValidation.validatePlan(), validate, billingControll
 router.put("/plan/:id", billingController.updatePlan);
 router.delete("/plan/:id", billingController.deletePlan);
 router.get("/plan/:id", billingController.getPlan);
-router.post("/subscribe", billingController.subscribe);
+// router.post("/subscribe", billingController.subscribe);
 router.post("/unsubscribe", billingController.unsubscribe);
 router.post("/create-order", billingController.createOrder);
+router.post("/purchase-additional-orders", billingController.createOrderCustomPlan);
 
 module.exports = router;

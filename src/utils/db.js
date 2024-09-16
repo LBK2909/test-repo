@@ -10,6 +10,10 @@ function getOrderModel() {
 function getCourierModel() {
   return require("../models/courier/courier.model.js");
 }
+function getOrganizationModel() {
+  return require("../models/organization.model.js");
+}
+
 const getNextDocumentId = async (sequenceName) => {
   const CounterModel = getCounterModel();
   const counterDocument = await CounterModel.findOneAndUpdate(
@@ -65,8 +69,30 @@ async function getCourierEndpoint(courierName, environment) {
   }
 }
 
+async function updateOrderCount(orgId, orderAdjustment) {
+  try {
+    const OrganizationModel = getOrganizationModel();
+
+    const updatedOrg = await OrganizationModel.findOneAndUpdate(
+      { _id: orgId },
+      { $inc: { orderCount: orderAdjustment } }, // Increment or decrement order count
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedOrg) {
+      throw new Error("Organization not found");
+    }
+
+    return updatedOrg;
+  } catch (error) {
+    console.error("Error updating order count:", error);
+    throw new Error("Failed to update order count");
+  }
+}
+
 module.exports = {
   getNextDocumentId,
   updateJobStatus,
   updateOrderStatus,
+  updateOrderCount,
 };

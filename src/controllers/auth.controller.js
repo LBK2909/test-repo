@@ -5,34 +5,42 @@ const { User, Organization } = require("../models");
 const CustomError = require("../utils/customError");
 const { Shop, ShopifyShop } = require("../models/shop.model");
 const mongoose = require("mongoose");
+
 exports.register = catchAsync(async (req, res) => {
+  const requestBody = req.body || null;
   let organizationCreated = null;
   let userCreated = null;
   try {
     // check if the user already exists
-    const existingUser = await User.findOne({ email: req.body.email });
+    const existingUser = await User.findOne({ email: requestBody?.email });
     if (existingUser) {
       return res.status(400).send({ message: "User already exists" });
     }
     // create a new organization with the email and name from the request
     let organization = await Organization.create({
-      organizationName: req.body.organizationName,
+      organizationName: requestBody?.organizationName,
       configurationSetup: false,
-      phoneNumber: req.body.phoneNumber,
+      phoneNumber: requestBody?.phoneNumber,
       isDefault: true,
+      billingAddress: {
+        country: requestBody?.country,
+      },
+      isFreeTrial: true,
+      orderCount: 50,
     });
+
     //get the organization id from the above created organization
     const organizationId = organization._id;
     organizationCreated = organization;
     //regsiter a new user with the above four fields
     const user = await User.create({
-      email: req.body.email,
-      password: req.body.password,
+      email: requestBody?.email,
+      password: requestBody?.password,
       isEmailVerified: true,
       organizations: [
         {
           organizationId: organizationId,
-          name: req.body.organizationName,
+          name: requestBody?.organizationName,
           roles: ["admin"],
         },
       ],

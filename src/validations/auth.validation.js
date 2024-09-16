@@ -15,6 +15,7 @@ const register = () => {
         }
         return true;
       }),
+    body("country").not().isEmpty().trim().exists(),
   ];
 };
 

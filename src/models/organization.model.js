@@ -32,6 +32,15 @@ const organizationSchema = new Schema(
       required: false,
     },
     isDefault: { type: Boolean, default: false },
+    orderCount: { type: Number, default: 0 },
+    channelCount: { type: Number, default: 0 },
+    activeSubscription: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subscription", // Reference to the Users collection
+      required: false,
+    },
+    paymentId: { type: String, default: null },
+    isFreeTrial: { type: Boolean, default: false },
   },
   {
     timestamps: true,

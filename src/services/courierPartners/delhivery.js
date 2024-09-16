@@ -4,7 +4,7 @@ var html_to_pdf = require("html-pdf-node");
 const QRCode = require("qrcode");
 var fs = require("fs");
 const Delhivery = require("../../integrations/courierPartners/delhivery.js");
-const { updateJobStatus, updateOrderStatus } = require("../../utils/db.js");
+const { updateJobStatus, updateOrderStatus, updateOrderCount } = require("../../utils/db.js");
 const { imageToBase64 } = require("../../utils/util.js");
 const CustomError = require("../../utils/customError");
 const { Order, OrganizationCourier, Organization } = require("../../models");
@@ -40,7 +40,8 @@ async function createShipment(order, job = null) {
     updateOrderStatus(order._id, { status: "pending" });
     updateOrderStatus(order._id, { "courierDetails.bookingStatus": "failed", "courierDetails.bookingInfo": err.message });
     if (job) {
-      updateJobStatus(job, "failedOrders");
+      await updateJobStatus(job, "failedOrders");
+      await updateOrderCount(order.orgId, 1);
     } else {
       throw new CustomError(500, err);
     }
@@ -410,8 +411,7 @@ const createShippingLabel = async (order) => {
     border-collapse: collapse;
     margin-top: 8px;
   }
-  .table-container{
-  }
+
   .product-info th,
   .product-info td {
     border: 1px solid #000;
@@ -492,7 +492,7 @@ const createShippingLabel = async (order) => {
     if (!emptyPDF) {
       return {};
     }
-    await page.setContent(pageHTML, { waitUntil: "networkidle0" });
+    await page.setContent(pageHTML, { waitUntil: "load" });
 
     let isPdfGenerated = await page
       .pdf({

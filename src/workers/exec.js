@@ -1,4 +1,4 @@
-const { startWorkers } = require("./startWorkers.js");
+const { startWorkers } = require("../startWorkers.js");
 
 setTimeout(() => {
   console.log("Starting workers... execution js");

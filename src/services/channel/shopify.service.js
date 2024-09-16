@@ -515,6 +515,21 @@ const uploadCustomerDataToS3 = async (customer, data) => {
     }
   }
 };
+const uninstallShop = async (shopId) => {
+  try {
+    const shopDetails = await ShopifyShop.findById(shopId);
+    if (!shopDetails) {
+      throw new CustomError(httpStatus.NOT_FOUND, "Shop not found");
+    }
+
+    await Shop.deleteOne({ _id: shopId });
+    await Order.deleteMany({ shop: shopId });
+    return { message: "Shop uninstalled successfully" };
+  } catch (error) {
+    console.error("Error while uninstalling shop:", error);
+    throw new CustomError(httpStatus.INTERNAL_SERVER_ERROR, "Error while uninstalling shop");
+  }
+};
 
 module.exports = {
   authenticateShop,
@@ -526,4 +541,5 @@ module.exports = {
   webhooksGetCustomerDataRequest,
   webhookCustomerRedact,
   webhooksShopRedact,
+  uninstallShop,
 };

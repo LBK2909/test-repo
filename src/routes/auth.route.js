@@ -13,7 +13,7 @@ const { Shop, ShopifyShop } = require("../models/shop.model");
 
 router.post("/register", authValidation.register(), validate, authController.register);
 // router.post("/register-shopify", authValidation.registerViaShopify(), validate, authController.registerViaShopify);
-router.post("/login", authValidation.login(), validate, authController.login);
+router.post("/login", authController.login);
 router.get("/logout", authController.logout);
 // Triggers the Google OAuth flow
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
