@@ -37,7 +37,7 @@ app.use(
 
 app.use((req, res, next) => {
   console.log(req.originalUrl);
-  if (req.originalUrl.includes("/webhooks")) {
+  if (req.originalUrl.includes("/billing/stripe/webhooks")) {
     // Skip JSON body parsing for routes that contain '/webhooks'
     next();
   } else {
@@ -47,7 +47,7 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
-  if (req.originalUrl.includes("/webhooks")) {
+  if (req.originalUrl.includes("/billing/stripe/webhooks")) {
     // Skip URL-encoded body parsing for Stripe webhook route
     next();
   } else {
